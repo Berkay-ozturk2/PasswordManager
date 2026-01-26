@@ -43,14 +43,21 @@ public class MainActivity extends AppCompatActivity {
         fabAdd = findViewById(R.id.fabAdd);
         fabFolders = findViewById(R.id.fabFolders);
 
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        if (recyclerView != null) {
+            recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        }
 
         // Başlangıçta verileri kontrol et ve yükle
         ensureDefaultCategoriesAndLoad();
 
         // Buton tıklama olayları
-        fabAdd.setOnClickListener(v -> showAddAccountDialog());
-        fabFolders.setOnClickListener(v -> showFolderPopupMenu(v));
+        if (fabAdd != null) {
+            fabAdd.setOnClickListener(v -> showAddAccountDialog());
+        }
+
+        if (fabFolders != null) {
+            fabFolders.setOnClickListener(v -> showFolderPopupMenu(v));
+        }
     }
 
     // Kategorileri kontrol eder, yoksa ekler ve ardından listeyi yükler
@@ -58,6 +65,7 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             try {
                 if (db.categoryDao().getAll().isEmpty()) {
+                    // Category sınıfınızın constructor'ı sadece 'name' beklediği için fazladan parametre silindi
                     db.categoryDao().insert(new Category("Sosyal Medya"));
                     db.categoryDao().insert(new Category("Banka"));
                     db.categoryDao().insert(new Category("E-Posta"));
@@ -83,8 +91,11 @@ public class MainActivity extends AppCompatActivity {
                 }
 
                 runOnUiThread(() -> {
+                    // AccountAdapter hem liste hem de Context beklediği için MainActivity.this eklendi
                     adapter = new AccountAdapter(accounts, MainActivity.this);
-                    recyclerView.setAdapter(adapter);
+                    if (recyclerView != null) {
+                        recyclerView.setAdapter(adapter);
+                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> Toast.makeText(MainActivity.this, "Liste yüklenemedi", Toast.LENGTH_SHORT).show());
@@ -105,20 +116,21 @@ public class MainActivity extends AppCompatActivity {
 
                     for (int i = 0; i < categories.size(); i++) {
                         Category cat = categories.get(i);
+                        // Item ID olarak kategori ID'sini atıyoruz
                         popup.getMenu().add(0, cat.id, i + 1, cat.name);
                     }
 
                     popup.setOnMenuItemClickListener(item -> {
                         selectedCategoryId = item.getItemId();
                         updateAccountList();
-                        Toast.makeText(MainActivity.this, item.getTitle() + " seçildi", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(MainActivity.this, item.getTitle() + " filtrelendi", Toast.LENGTH_SHORT).show();
                         return true;
                     });
 
                     popup.show();
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Kategoriler yüklenemedi", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Klasörler yüklenemedi", Toast.LENGTH_SHORT).show());
             }
         }).start();
     }
@@ -141,55 +153,66 @@ public class MainActivity extends AppCompatActivity {
             try {
                 final List<Category> categories = db.categoryDao().getAll();
                 List<String> categoryNames = new ArrayList<>();
-                for (Category c : categories) categoryNames.add(c.name);
+                for (Category c : categories) {
+                    categoryNames.add(c.name);
+                }
 
                 runOnUiThread(() -> {
                     if (categories.isEmpty()) {
-                        Toast.makeText(this, "Önce kategori oluşturulmalı", Toast.LENGTH_LONG).show();
+                        Toast.makeText(this, "Önce klasör oluşturulmalı", Toast.LENGTH_LONG).show();
                         dialog.dismiss();
                         return;
                     }
 
-                    ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categoryNames);
-                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                    spinnerCategory.setAdapter(spinnerAdapter);
+                    if (spinnerCategory != null) {
+                        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categoryNames);
+                        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                        spinnerCategory.setAdapter(spinnerAdapter);
 
-                    // Eğer bir klasör/kategori içindeysek onu varsayılan seç
-                    if (selectedCategoryId != -1) {
-                        for (int i = 0; i < categories.size(); i++) {
-                            if (categories.get(i).id == selectedCategoryId) {
-                                spinnerCategory.setSelection(i);
-                                break;
+                        // Filtreli bir klasördeysek, o klasörü otomatik seç
+                        if (selectedCategoryId != -1) {
+                            for (int i = 0; i < categories.size(); i++) {
+                                if (categories.get(i).id == selectedCategoryId) {
+                                    spinnerCategory.setSelection(i);
+                                    break;
+                                }
                             }
                         }
                     }
 
-                    // Kaydet butonu dinleyicisi UI Thread içinde kurulmalı
-                    btnSave.setOnClickListener(v -> {
-                        String title = etTitle.getText().toString().trim();
-                        String user = etUsername.getText().toString().trim();
-                        String pass = etPassword.getText().toString().trim();
+                    if (btnSave != null) {
+                        btnSave.setOnClickListener(v -> {
+                            String title = etTitle != null ? etTitle.getText().toString().trim() : "";
+                            String user = etUsername != null ? etUsername.getText().toString().trim() : "";
+                            String pass = etPassword != null ? etPassword.getText().toString().trim() : "";
 
-                        if (title.isEmpty() || user.isEmpty() || pass.isEmpty()) {
-                            Toast.makeText(this, "Tüm alanları doldurun", Toast.LENGTH_SHORT).show();
-                            return;
-                        }
+                            if (title.isEmpty() || pass.isEmpty()) {
+                                Toast.makeText(this, "Başlık ve Şifre boş bırakılamaz", Toast.LENGTH_SHORT).show();
+                                return;
+                            }
 
-                        int selectedPos = spinnerCategory.getSelectedItemPosition();
-                        int catId = categories.get(selectedPos).id;
+                            int selectedPos = spinnerCategory != null ? spinnerCategory.getSelectedItemPosition() : 0;
+                            if (selectedPos < 0) return;
 
-                        new Thread(() -> {
-                            db.accountDao().insert(new Account(title, user, pass, catId));
-                            runOnUiThread(() -> {
-                                updateAccountList();
-                                dialog.dismiss();
-                                Toast.makeText(this, "Hesap kaydedildi", Toast.LENGTH_SHORT).show();
-                            });
-                        }).start();
-                    });
+                            int catId = categories.get(selectedPos).id;
+
+                            new Thread(() -> {
+                                try {
+                                    db.accountDao().insert(new Account(title, user, pass, catId));
+                                    runOnUiThread(() -> {
+                                        updateAccountList();
+                                        dialog.dismiss();
+                                        Toast.makeText(this, "Başarıyla kaydedildi", Toast.LENGTH_SHORT).show();
+                                    });
+                                } catch (Exception ex) {
+                                    runOnUiThread(() -> Toast.makeText(this, "Kayıt hatası!", Toast.LENGTH_SHORT).show());
+                                }
+                            }).start();
+                        });
+                    }
                 });
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Dialog hatası", Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Veri yükleme hatası", Toast.LENGTH_SHORT).show());
             }
         }).start();
 
