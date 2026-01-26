@@ -7,16 +7,18 @@ import androidx.room.PrimaryKey;
 public class Account {
     @PrimaryKey(autoGenerate = true)
     public int id;
-
-    public String siteName;
+    public String title;
     public String username;
     public String password;
-    public int categoryId; // Hesabın hangi klasöre ait olduğunu belirler
+    public String category;
 
-    public Account(String siteName, String username, String password, int categoryId) {
-        this.siteName = siteName;
+    // Room için gerekli boş constructor
+    public Account() {}
+
+    public Account(String title, String username, String password, String category) {
+        this.title = title;
         this.username = username;
         this.password = password;
-        this.categoryId = categoryId;
+        this.category = category;
     }
 }
