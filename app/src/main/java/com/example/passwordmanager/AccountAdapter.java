@@ -16,6 +16,12 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
         this.accountList = accountList;
     }
 
+    // Listeyi güncellemek için bu metod eklendi
+    public void updateAccounts(List<Account> newAccounts) {
+        this.accountList = newAccounts;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public AccountViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -26,7 +32,7 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
     @Override
     public void onBindViewHolder(@NonNull AccountViewHolder holder, int position) {
         Account account = accountList.get(position);
-        holder.tvSiteName.setText(account.title); // siteName yerine title
+        holder.tvSiteName.setText(account.title);
         holder.tvUsername.setText(account.username);
 
         holder.itemView.setOnClickListener(v -> {
@@ -41,7 +47,7 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
 
     @Override
     public int getItemCount() {
-        return accountList.size();
+        return accountList != null ? accountList.size() : 0;
     }
 
     public static class AccountViewHolder extends RecyclerView.ViewHolder {

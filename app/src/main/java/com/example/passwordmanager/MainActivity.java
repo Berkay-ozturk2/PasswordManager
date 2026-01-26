@@ -37,10 +37,11 @@ public class MainActivity extends AppCompatActivity {
         }
 
         ensureDefaultCategoriesAndLoad();
-    } // <<< DO NOT close the class here
+    }
 
     private void ensureDefaultCategoriesAndLoad() {
         new Thread(() -> {
+            // CategoryDao içindeki doğru metod (getAll) çağrıldı
             if (db.categoryDao().getAll().isEmpty()) {
                 db.categoryDao().insert(new Category("Sosyal Medya", false));
                 db.categoryDao().insert(new Category("E-Posta", false));
@@ -59,7 +60,6 @@ public class MainActivity extends AppCompatActivity {
                     recyclerView.setAdapter(adapter);
                 } else {
                     adapter.updateAccounts(accounts);
-                    adapter.notifyDataSetChanged();
                 }
             });
         }).start();
@@ -76,7 +76,8 @@ public class MainActivity extends AppCompatActivity {
         Button btnSave = view.findViewById(R.id.btnSave);
 
         new Thread(() -> {
-            List<Category> categories = db.categoryDao().getAllCategoriesSync();
+            // HATA DÜZELTİLDİ: getAllCategoriesSync yerine getAll kullanıldı
+            List<Category> categories = db.categoryDao().getAll();
             List<String> categoryNames = new ArrayList<>();
             for (Category c : categories) {
                 categoryNames.add(c.name);
@@ -97,7 +98,7 @@ public class MainActivity extends AppCompatActivity {
             String title = etTitle.getText().toString().trim();
             String username = etUsername.getText().toString().trim();
             String password = etPassword.getText().toString().trim();
-            String category = spinnerCategory.getSelectedItem() != null ?
+            String category = (spinnerCategory.getSelectedItem() != null) ?
                     spinnerCategory.getSelectedItem().toString() : "";
 
             if (title.isEmpty() || username.isEmpty() || password.isEmpty()) {
@@ -116,4 +117,4 @@ public class MainActivity extends AppCompatActivity {
 
         dialog.show();
     }
-} // <<< THIS is the correct place for the final closing brace.
+}
