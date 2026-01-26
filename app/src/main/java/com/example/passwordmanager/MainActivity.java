@@ -69,9 +69,18 @@ public class MainActivity extends AppCompatActivity {
             if (query.isEmpty()) {
                 result = db.accountDao().getAll();
             } else {
-                // Türkçe dil kurallarına göre küçük harfe çevirerek arama yapıyoruz
-                String turkishQuery = "%" + query.toLowerCase(new Locale("tr", "TR")) + "%";
-                result = db.accountDao().searchAccounts(turkishQuery);
+                // Veritabanındaki verileri çekip Java tarafında Türkçe kurallarıyla filtreliyoruz
+                List<Account> allAccounts = db.accountDao().getAll();
+                result = new ArrayList<>();
+                Locale trLocale = new Locale("tr", "TR");
+                String lowerQuery = query.toLowerCase(trLocale);
+
+                for (Account acc : allAccounts) {
+                    // Hem başlığı hem de arama kelimesini Türkçe kurallarıyla küçültüp kıyaslıyoruz
+                    if (acc.title.toLowerCase(trLocale).contains(lowerQuery)) {
+                        result.add(acc);
+                    }
+                }
             }
             runOnUiThread(() -> {
                 if (adapter != null) {

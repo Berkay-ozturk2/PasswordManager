@@ -15,8 +15,8 @@ public interface AccountDao {
     @Query("SELECT * FROM accounts WHERE category = :categoryName")
     List<Account> getAccountsByCategory(String categoryName);
 
-    // Arama özelliği için eklenen sorgu
-    @Query("SELECT * FROM accounts WHERE LOWER(title) LIKE LOWER(:query)")
+    // SQL tarafında LOWER kullanmıyoruz, çünkü Türkçe karakterleri desteklemez
+    @Query("SELECT * FROM accounts WHERE title LIKE :query")
     List<Account> searchAccounts(String query);
 
     @Insert
@@ -27,7 +27,4 @@ public interface AccountDao {
 
     @Delete
     void delete(Account account);
-
-    @Query("DELETE FROM accounts WHERE id = :id")
-    void deleteById(int id);
 }
