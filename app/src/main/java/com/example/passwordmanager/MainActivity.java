@@ -7,6 +7,8 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -26,20 +28,20 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         db = AppDatabase.getInstance(this);
-        // XML'deki ID 'recyclerView' olarak düzeltildi
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        FloatingActionButton fab = findViewById(R.id.fabAddAccount);
-        fab.setOnClickListener(v -> showAddAccountDialog());
+        FloatingActionButton fab = findViewById(R.id.fabAdd);
+        if (fab != null) {
+            fab.setOnClickListener(v -> showAddAccountDialog());
+        }
 
         ensureDefaultCategoriesAndLoad();
-    }
+    } // <<< DO NOT close the class here
 
     private void ensureDefaultCategoriesAndLoad() {
         new Thread(() -> {
-            if (db.categoryDao().getAllCategoriesSync().isEmpty()) {
-                // Category constructor'ına boolean isHidden parametresi eklendi
+            if (db.categoryDao().getAll().isEmpty()) {
                 db.categoryDao().insert(new Category("Sosyal Medya", false));
                 db.categoryDao().insert(new Category("E-Posta", false));
                 db.categoryDao().insert(new Category("Banka", false));
@@ -50,11 +52,15 @@ public class MainActivity extends AppCompatActivity {
 
     private void updateAccountList() {
         new Thread(() -> {
-            List<Account> accounts = db.accountDao().getAllAccountsSync();
+            List<Account> accounts = db.accountDao().getAll();
             runOnUiThread(() -> {
-                // Adapter sadece listeyi alacak şekilde düzeltildi
-                adapter = new AccountAdapter(accounts);
-                recyclerView.setAdapter(adapter);
+                if (adapter == null) {
+                    adapter = new AccountAdapter(accounts);
+                    recyclerView.setAdapter(adapter);
+                } else {
+                    adapter.updateAccounts(accounts);
+                    adapter.notifyDataSetChanged();
+                }
             });
         }).start();
     }
@@ -69,7 +75,6 @@ public class MainActivity extends AppCompatActivity {
         Spinner spinnerCategory = view.findViewById(R.id.spinnerCategory);
         Button btnSave = view.findViewById(R.id.btnSave);
 
-        // Kategorileri veritabanından çekip Spinner'a doldurma
         new Thread(() -> {
             List<Category> categories = db.categoryDao().getAllCategoriesSync();
             List<String> categoryNames = new ArrayList<>();
@@ -78,10 +83,10 @@ public class MainActivity extends AppCompatActivity {
             }
 
             runOnUiThread(() -> {
-                ArrayAdapter<String> adapter = new ArrayAdapter<>(this,
+                ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this,
                         android.R.layout.simple_spinner_item, categoryNames);
-                adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                spinnerCategory.setAdapter(adapter);
+                catAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                spinnerCategory.setAdapter(catAdapter);
             });
         }).start();
 
@@ -92,10 +97,11 @@ public class MainActivity extends AppCompatActivity {
             String title = etTitle.getText().toString().trim();
             String username = etUsername.getText().toString().trim();
             String password = etPassword.getText().toString().trim();
-            String category = spinnerCategory.getSelectedItem().toString();
+            String category = spinnerCategory.getSelectedItem() != null ?
+                    spinnerCategory.getSelectedItem().toString() : "";
 
             if (title.isEmpty() || username.isEmpty() || password.isEmpty()) {
-                etTitle.setError("Lütfen tüm alanları doldurun");
+                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
                 return;
             }
 
@@ -103,7 +109,6 @@ public class MainActivity extends AppCompatActivity {
                 Account newAccount = new Account(title, username, password, category);
                 db.accountDao().insert(newAccount);
 
-                // Listeyi yenile ve diyalogu kapat
                 updateAccountList();
                 runOnUiThread(dialog::dismiss);
             }).start();
@@ -111,4 +116,4 @@ public class MainActivity extends AppCompatActivity {
 
         dialog.show();
     }
-}
+} // <<< THIS is the correct place for the final closing brace.

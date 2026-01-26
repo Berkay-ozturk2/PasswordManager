@@ -53,8 +53,6 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="Kaydet"
-        android:layout_marginTop="20dp"
-        android:backgroundTint="@color/purple_500"
-        android:textColor="@white" />
+        android:layout_marginTop="20dp" />
 
 </LinearLayout>

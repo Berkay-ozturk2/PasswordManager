@@ -10,9 +10,8 @@ public class Account {
     public String title;
     public String username;
     public String password;
-    public String category;
+    public String category; // Kategori ismi olarak tutuluyor
 
-    // Room için gerekli boş constructor
     public Account() {}
 
     public Account(String title, String username, String password, String category) {

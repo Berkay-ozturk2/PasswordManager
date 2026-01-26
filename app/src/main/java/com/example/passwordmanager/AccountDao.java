@@ -11,8 +11,8 @@ public interface AccountDao {
     @Query("SELECT * FROM accounts")
     List<Account> getAll();
 
-    @Query("SELECT * FROM accounts WHERE categoryId = :catId")
-    List<Account> getAccountsByCategory(int catId);
+    @Query("SELECT * FROM accounts WHERE category = :categoryName")
+    List<Account> getAccountsByCategory(String categoryName);
 
     @Insert
     void insert(Account account);
