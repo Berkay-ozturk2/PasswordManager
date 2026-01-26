@@ -1,4 +1,4 @@
-package com.example.passwordmanager; // Burayı kendi paket adınla değiştir!
+package com.example.passwordmanager;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
@@ -10,11 +10,13 @@ public class Account {
 
     public String siteName;
     public String username;
-    public String password; // İleride bunu şifreleyeceğiz
+    public String password;
+    public int categoryId; // Hangi klasörde olduğunu tutar
 
-    public Account(String siteName, String username, String password) {
+    public Account(String siteName, String username, String password, int categoryId) {
         this.siteName = siteName;
         this.username = username;
         this.password = password;
+        this.categoryId = categoryId;
     }
 }

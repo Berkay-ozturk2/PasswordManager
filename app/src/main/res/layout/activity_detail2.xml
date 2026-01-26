@@ -1,28 +1,40 @@
-<LinearLayout ... >
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="24dp">
 
-<TextView
-android:id="@+id/detailSiteName"
-android:layout_width="match_parent"
-android:layout_height="wrap_content"
-android:text="Site Adı" />
+    <TextView
+        android:id="@+id/detailSiteName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:text="Site Adı" />
 
-<TextView
-android:id="@+id/detailUsername"
-android:layout_width="match_parent"
-android:layout_height="wrap_content"
-android:text="Kullanıcı Adı" />
+    <TextView
+        android:id="@+id/detailUsername"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textSize="18sp"
+        android:text="Kullanıcı Adı" />
 
-<EditText
-android:id="@+id/detailPassword"
-android:layout_width="match_parent"
-android:layout_height="wrap_content"
-android:inputType="textPassword"
-android:text="Şifre" />
+    <EditText
+        android:id="@+id/detailPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:inputType="textPassword"
+        android:enabled="false"
+        android:text="Şifre" />
 
-<Button
-android:id="@+id/btnTogglePassword"
-android:layout_width="wrap_content"
-android:layout_height="wrap_content"
-android:text="Göster/Gizle" />
+    <Button
+        android:id="@+id/btnTogglePassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="Şifreyi Göster" />
 
-    </LinearLayout>
+</LinearLayout>

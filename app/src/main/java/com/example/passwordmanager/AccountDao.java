@@ -1,5 +1,5 @@
-
 package com.example.passwordmanager;
+
 import androidx.room.Dao;
 import androidx.room.Delete;
 import androidx.room.Insert;
@@ -10,6 +10,9 @@ import java.util.List;
 public interface AccountDao {
     @Query("SELECT * FROM accounts")
     List<Account> getAll();
+
+    @Query("SELECT * FROM accounts WHERE categoryId = :catId")
+    List<Account> getAccountsByCategory(int catId);
 
     @Insert
     void insert(Account account);

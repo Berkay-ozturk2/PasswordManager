@@ -1,9 +1,11 @@
-package com.example.passwordmanager; // Bu satırı en üste ekle
+package com.example.passwordmanager;
 
 import androidx.room.Database;
 import androidx.room.RoomDatabase;
 
-@Database(entities = {Account.class}, version = 1)
+// Versiyonu 2 yapıyoruz çünkü tablo yapısı değişti
+@Database(entities = {Account.class, Category.class}, version = 2)
 public abstract class AppDatabase extends RoomDatabase {
     public abstract AccountDao accountDao();
+    public abstract CategoryDao categoryDao();
 }
