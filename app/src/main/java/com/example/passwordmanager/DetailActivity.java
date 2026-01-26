@@ -14,24 +14,34 @@ public class DetailActivity extends AppCompatActivity {
         setContentView(R.layout.activity_detail);
 
         int id = getIntent().getIntExtra("id", -1);
-        ((TextView)findViewById(R.id.tvDetailTitle)).setText(getIntent().getStringExtra("title"));
-        ((TextView)findViewById(R.id.tvDetailUsername)).setText(getIntent().getStringExtra("username"));
-        ((TextView)findViewById(R.id.tvDetailPassword)).setText(getIntent().getStringExtra("password"));
 
-        findViewById(R.id.btnDelete).setOnClickListener(v -> {
-            new AlertDialog.Builder(this)
-                    .setTitle("Sil")
-                    .setMessage("Emin misiniz?")
-                    .setPositiveButton("Evet", (dialog, which) -> {
-                        new Thread(() -> {
-                            AppDatabase.getInstance(this).accountDao().deleteById(id);
-                            runOnUiThread(() -> {
-                                Toast.makeText(this, "Silindi", Toast.LENGTH_SHORT).show();
-                                finish();
-                            });
-                        }).start();
-                    })
-                    .setNegativeButton("Hayır", null).show();
-        });
+        TextView tvTitle = findViewById(R.id.tvDetailTitle);
+        TextView tvUser = findViewById(R.id.tvDetailUsername);
+        TextView tvPass = findViewById(R.id.tvDetailPassword);
+        Button btnDelete = findViewById(R.id.btnDelete);
+
+        if (getIntent() != null) {
+            tvTitle.setText(getIntent().getStringExtra("title"));
+            tvUser.setText(getIntent().getStringExtra("username"));
+            tvPass.setText(getIntent().getStringExtra("password"));
+        }
+
+        if (btnDelete != null) {
+            btnDelete.setOnClickListener(v -> {
+                new AlertDialog.Builder(this)
+                        .setTitle("Hesabı Sil")
+                        .setMessage("Bu hesabı silmek istediğinize emin misiniz?")
+                        .setPositiveButton("Evet", (dialog, which) -> {
+                            new Thread(() -> {
+                                AppDatabase.getInstance(this).accountDao().deleteById(id);
+                                runOnUiThread(() -> {
+                                    Toast.makeText(this, "Hesap silindi", Toast.LENGTH_SHORT).show();
+                                    finish();
+                                });
+                            }).start();
+                        })
+                        .setNegativeButton("Hayır", null).show();
+            });
+        }
     }
 }

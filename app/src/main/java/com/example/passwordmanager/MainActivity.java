@@ -2,7 +2,6 @@ package com.example.passwordmanager;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -67,7 +66,10 @@ public class MainActivity extends AppCompatActivity {
             if (!name.isEmpty()) {
                 new Thread(() -> {
                     db.categoryDao().insert(new Category(name, false));
-                    runOnUiThread(dialog::dismiss);
+                    runOnUiThread(() -> {
+                        dialog.dismiss();
+                        Toast.makeText(this, "Kategori eklendi", Toast.LENGTH_SHORT).show();
+                    });
                 }).start();
             }
         });
@@ -77,7 +79,9 @@ public class MainActivity extends AppCompatActivity {
     private void filterAccountsByCategory(String categoryName) {
         new Thread(() -> {
             List<Account> filtered = db.accountDao().getAccountsByCategory(categoryName);
-            runOnUiThread(() -> adapter.updateAccounts(filtered));
+            runOnUiThread(() -> {
+                if (adapter != null) adapter.updateAccounts(filtered);
+            });
         }).start();
     }
 
@@ -112,6 +116,7 @@ public class MainActivity extends AppCompatActivity {
     private void showAddAccountDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_account, null);
+
         EditText etTitle = view.findViewById(R.id.etTitle);
         EditText etUsername = view.findViewById(R.id.etUsername);
         EditText etPassword = view.findViewById(R.id.etPassword);
@@ -135,13 +140,18 @@ public class MainActivity extends AppCompatActivity {
             String title = etTitle.getText().toString().trim();
             String user = etUsername.getText().toString().trim();
             String pass = etPassword.getText().toString().trim();
-            String cat = spinnerCategory.getSelectedItem().toString();
+
+            Object selected = spinnerCategory.getSelectedItem();
+            String cat = (selected != null) ? selected.toString() : "Genel";
+
             if (!title.isEmpty() && !user.isEmpty() && !pass.isEmpty()) {
                 new Thread(() -> {
                     db.accountDao().insert(new Account(title, user, pass, cat));
                     updateAccountList();
                     runOnUiThread(dialog::dismiss);
                 }).start();
+            } else {
+                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
             }
         });
         dialog.show();
