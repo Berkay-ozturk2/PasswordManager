@@ -28,9 +28,11 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
         Account account = accountList.get(position);
         holder.tvSiteName.setText(account.siteName);
         holder.tvUsername.setText(account.username);
+
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), DetailActivity.class);
-            // Verileri diğer ekrana paketleyip gönderiyoruz
+            // ID gönderimi eklendi
+            intent.putExtra("id", account.id);
             intent.putExtra("siteName", account.siteName);
             intent.putExtra("username", account.username);
             intent.putExtra("password", account.password);

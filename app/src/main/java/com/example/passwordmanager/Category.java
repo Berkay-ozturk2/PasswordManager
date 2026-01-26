@@ -9,7 +9,7 @@ public class Category {
     public int id;
 
     public String name;
-    public boolean isHidden; // Gizli klasör olup olmadığını belirler
+    public boolean isHidden; // Gizli klasör mü?
 
     public Category(String name, boolean isHidden) {
         this.name = name;

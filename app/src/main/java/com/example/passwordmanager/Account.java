@@ -11,7 +11,7 @@ public class Account {
     public String siteName;
     public String username;
     public String password;
-    public int categoryId; // Hangi klasörde olduğunu tutar
+    public int categoryId; // Hesabın hangi klasöre ait olduğunu belirler
 
     public Account(String siteName, String username, String password, int categoryId) {
         this.siteName = siteName;
