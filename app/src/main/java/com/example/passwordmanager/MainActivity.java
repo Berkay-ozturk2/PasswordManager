@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+
 public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private AccountAdapter adapter;
@@ -68,8 +69,7 @@ public class MainActivity extends AppCompatActivity {
             if (query.isEmpty()) {
                 result = db.accountDao().getAll();
             } else {
-                // Türkçe karakterlere uygun arama sorgusu oluşturma
-                // query.toLowerCase() yerine Locale.forLanguageTag("tr") kullanıyoruz
+                // Türkçe dil kurallarına göre küçük harfe çevirerek arama yapıyoruz
                 String turkishQuery = "%" + query.toLowerCase(new Locale("tr", "TR")) + "%";
                 result = db.accountDao().searchAccounts(turkishQuery);
             }

@@ -21,25 +21,21 @@
         android:layout_height="wrap_content"
         android:hint="Site Adı (Örn: Instagram)"
         android:backgroundTint="@color/primary"
-        android:inputType="textNoSuggestions" />
-
-    <EditText
-        android:id="@+id/etUsername"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Kullanıcı Adı veya E-posta"
-        android:backgroundTint="@color/primary"
-        android:layout_marginTop="12dp"
-        android:inputType="textNoSuggestions" />
-
-    <EditText
-        android:id="@+id/etPassword"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:hint="Şifre"
-        android:backgroundTint="@color/primary"
-        android:layout_marginTop="12dp"
-        android:inputType="textPassword" />
+        android:inputType="textNoSuggestions" /> <EditText
+    android:id="@+id/etUsername"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:hint="Kullanıcı Adı veya E-posta"
+    android:backgroundTint="@color/primary"
+    android:layout_marginTop="12dp"
+    android:inputType="textNoSuggestions" /> <EditText
+    android:id="@+id/etPassword"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:hint="Şifre"
+    android:backgroundTint="@color/primary"
+    android:layout_marginTop="12dp"
+    android:inputType="textPassword" />
 
     <TextView
         android:layout_width="match_parent"
