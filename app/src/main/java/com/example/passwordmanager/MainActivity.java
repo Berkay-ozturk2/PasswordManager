@@ -11,9 +11,10 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
-import androidx.appcompat.widget.SearchView; // Arama için eklendi
+import androidx.appcompat.widget.SearchView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.splashscreen.SplashScreen; // Splash Screen için gerekli import
 import java.util.ArrayList;
 import java.util.List;
 
@@ -24,6 +25,9 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        // 1. ADIM: Splash Screen'i yükle (super.onCreate ve setContentView'dan ÖNCE olmalı)
+        SplashScreen.installSplashScreen(this);
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -31,7 +35,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // --- ARAMA ÖZELLİĞİ KURULUMU ---
+        // Arama Özelliği (SearchView) Kurulumu
         SearchView searchView = findViewById(R.id.searchView);
         if (searchView != null) {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
@@ -49,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
             });
         }
 
+        // Buton Dinleyicileri
         findViewById(R.id.fabAdd).setOnClickListener(v -> showAddAccountDialog());
         findViewById(R.id.fabFolders).setOnClickListener(v -> showCategoryPopupMenu(v));
 
@@ -62,7 +67,6 @@ public class MainActivity extends AppCompatActivity {
             if (query.isEmpty()) {
                 result = db.accountDao().getAll();
             } else {
-                // SQL LIKE sorgusu için % ekliyoruz
                 result = db.accountDao().searchAccounts("%" + query + "%");
             }
             runOnUiThread(() -> {
@@ -81,9 +85,11 @@ public class MainActivity extends AppCompatActivity {
                 popupMenu.getMenu().add(0, 0, 0, "+ Yeni Kategori Ekle");
                 popupMenu.getMenu().add(0, 1, 1, "- Kategori Sil");
                 popupMenu.getMenu().add(0, 2, 2, "Tümü");
+
                 for (Category c : categories) {
                     popupMenu.getMenu().add(0, c.id + 100, 3, c.name);
                 }
+
                 popupMenu.setOnMenuItemClickListener(item -> {
                     int id = item.getItemId();
                     if (id == 0) showAddCategoryDialog();
