@@ -1,236 +1,198 @@
 package com.example.passwordmanager;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
-import android.widget.CheckBox;
+import android.widget.Button;
 import android.widget.EditText;
-import android.widget.LinearLayout;
+import android.widget.PopupMenu;
 import android.widget.Spinner;
 import android.widget.Toast;
+
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.room.Room;
+
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private AppDatabase db;
-    private SharedPreferences prefs;
+
     private RecyclerView recyclerView;
-    private FloatingActionButton fabAdd;
-    private FloatingActionButton fabFolders; // Yeni eklenen dosya simgesi butonu
+    private AccountAdapter adapter;
+    private AppDatabase db;
+    private FloatingActionButton fabAdd, fabFolders;
+
+    // Şu an seçili olan kategori ID'sini tutar (-1 ise tüm hesaplar gösterilir)
+    private int selectedCategoryId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // Veritabanı başlatma
-        db = Room.databaseBuilder(getApplicationContext(), AppDatabase.class, "sifre-kasasi")
-                .allowMainThreadQueries()
-                .fallbackToDestructiveMigration()
-                .build();
+        // Veritabanı bağlantısı
+        db = AppDatabase.getInstance(this);
 
-        prefs = getSharedPreferences("SecurityPrefs", MODE_PRIVATE);
-        recyclerView = findViewById(R.id.recyclerView);
+        // Görünümleri tanımlama
+        recyclerView = findViewById(R.id.recyclerViewAccounts);
+        fabAdd = findViewById(R.id.fabAdd);
+        fabFolders = findViewById(R.id.fabFolders);
+
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Sağdaki + Butonu (Hesap ve Klasör Ekleme için)
-        fabAdd = findViewById(R.id.fabAdd);
-        fabAdd.setOnClickListener(v -> showAddOptionsDialog());
+        // Başlangıçta verileri kontrol et ve yükle
+        ensureDefaultCategoriesAndLoad();
 
-        // Soldaki Dosya Butonu (Klasörleri Listeleme/Filtreleme için)
-        fabFolders = findViewById(R.id.fabFolders);
-        fabFolders.setOnClickListener(v -> showFolderFilterDialog());
-
-        checkMasterPassword();
-
-        // Varsayılan kategoriler
-        if (db.categoryDao().getAll().isEmpty()) {
-            db.categoryDao().insert(new Category("Genel", false));
-            db.categoryDao().insert(new Category("Gizli Klasör", true));
-        }
-
-        updateAccountList();
+        // Buton tıklama olayları
+        fabAdd.setOnClickListener(v -> showAddAccountDialog());
+        fabFolders.setOnClickListener(v -> showFolderPopupMenu(v));
     }
 
-    // + Butonuna basıldığında seçenekleri gösteren dialog
-    private void showAddOptionsDialog() {
-        String[] options = {"Yeni Hesap Ekle", "Yeni Klasör Oluştur"};
-        new AlertDialog.Builder(this)
-                .setTitle("Ekleme Seçenekleri")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        showAddAccountDialog();
-                    } else {
-                        showAddFolderDialog();
+    // Kategorileri kontrol eder, yoksa ekler ve ardından listeyi yükler
+    private void ensureDefaultCategoriesAndLoad() {
+        new Thread(() -> {
+            try {
+                if (db.categoryDao().getAll().isEmpty()) {
+                    db.categoryDao().insert(new Category("Sosyal Medya"));
+                    db.categoryDao().insert(new Category("Banka"));
+                    db.categoryDao().insert(new Category("E-Posta"));
+                    db.categoryDao().insert(new Category("Oyun"));
+                }
+                // Kategoriler hazır olduktan sonra listeyi güncelle
+                updateAccountList();
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Veritabanı hatası: " + e.getMessage(), Toast.LENGTH_LONG).show());
+            }
+        }).start();
+    }
+
+    // Listeyi seçili kategoriye göre günceller
+    private void updateAccountList() {
+        new Thread(() -> {
+            try {
+                final List<Account> accounts;
+                if (selectedCategoryId == -1) {
+                    accounts = db.accountDao().getAll();
+                } else {
+                    accounts = db.accountDao().getAccountsByCategory(selectedCategoryId);
+                }
+
+                runOnUiThread(() -> {
+                    adapter = new AccountAdapter(accounts, MainActivity.this);
+                    recyclerView.setAdapter(adapter);
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Liste yüklenemedi", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    // Sol üstteki buton için PopupMenu (Açılır Menü)
+    private void showFolderPopupMenu(View view) {
+        PopupMenu popup = new PopupMenu(this, view);
+
+        new Thread(() -> {
+            try {
+                List<Category> categories = db.categoryDao().getAll();
+
+                runOnUiThread(() -> {
+                    popup.getMenu().add(0, -1, 0, "Tüm Hesaplar");
+
+                    for (int i = 0; i < categories.size(); i++) {
+                        Category cat = categories.get(i);
+                        popup.getMenu().add(0, cat.id, i + 1, cat.name);
                     }
-                })
-                .show();
+
+                    popup.setOnMenuItemClickListener(item -> {
+                        selectedCategoryId = item.getItemId();
+                        updateAccountList();
+                        Toast.makeText(MainActivity.this, item.getTitle() + " seçildi", Toast.LENGTH_SHORT).show();
+                        return true;
+                    });
+
+                    popup.show();
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Kategoriler yüklenemedi", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
     }
 
-    // Klasörleri listeleme ve filtreleme dialogu (Artık sol butona bağlı)
-    private void showFolderFilterDialog() {
-        List<Category> categories = db.categoryDao().getAll();
-        List<String> catNames = new ArrayList<>();
-        catNames.add("Tüm Hesaplar"); // Varsayılan seçenek
-        for (Category c : categories) {
-            catNames.add(c.name + (c.isHidden ? " (Gizli)" : ""));
-        }
+    // Yeni hesap ekleme diyaloğu
+    private void showAddAccountDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        View view = LayoutInflater.from(this).inflate(R.layout.activity_detail2, null);
+        builder.setView(view);
 
-        new AlertDialog.Builder(this)
-                .setTitle("Görüntülenecek Klasörü Seçin")
-                .setItems(catNames.toArray(new String[0]), (dialog, which) -> {
-                    if (which == 0) {
-                        updateAccountList(); // Tümünü göster
-                    } else {
-                        Category selectedCat = categories.get(which - 1);
-                        if (selectedCat.isHidden) {
-                            askMasterPasswordForFolder(selectedCat.id);
-                        } else {
-                            loadAccountsByCategory(selectedCat.id);
+        EditText etTitle = view.findViewById(R.id.etTitle);
+        EditText etUsername = view.findViewById(R.id.etUsername);
+        EditText etPassword = view.findViewById(R.id.etPassword);
+        Spinner spinnerCategory = view.findViewById(R.id.spinnerCategory);
+        Button btnSave = view.findViewById(R.id.btnSave);
+
+        AlertDialog dialog = builder.create();
+
+        new Thread(() -> {
+            try {
+                final List<Category> categories = db.categoryDao().getAll();
+                List<String> categoryNames = new ArrayList<>();
+                for (Category c : categories) categoryNames.add(c.name);
+
+                runOnUiThread(() -> {
+                    if (categories.isEmpty()) {
+                        Toast.makeText(this, "Önce kategori oluşturulmalı", Toast.LENGTH_LONG).show();
+                        dialog.dismiss();
+                        return;
+                    }
+
+                    ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, categoryNames);
+                    spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                    spinnerCategory.setAdapter(spinnerAdapter);
+
+                    // Eğer bir klasör/kategori içindeysek onu varsayılan seç
+                    if (selectedCategoryId != -1) {
+                        for (int i = 0; i < categories.size(); i++) {
+                            if (categories.get(i).id == selectedCategoryId) {
+                                spinnerCategory.setSelection(i);
+                                break;
+                            }
                         }
                     }
-                })
-                .show();
-    }
 
-    // Gizli klasörler için şifre sorma
-    private void askMasterPasswordForFolder(int categoryId) {
-        final EditText input = new EditText(this);
-        input.setHint("Ana Şifre");
-        new AlertDialog.Builder(this)
-                .setTitle("Güvenlik")
-                .setMessage("Bu klasöre erişmek için ana şifrenizi girin.")
-                .setView(input)
-                .setPositiveButton("Giriş", (d, w) -> {
-                    String pass = input.getText().toString();
-                    String savedPass = prefs.getString("master_password", "");
-                    if (pass.equals(savedPass)) {
-                        loadAccountsByCategory(categoryId);
-                    } else {
-                        Toast.makeText(this, "Hatalı şifre!", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("İptal", null)
-                .show();
-    }
+                    // Kaydet butonu dinleyicisi UI Thread içinde kurulmalı
+                    btnSave.setOnClickListener(v -> {
+                        String title = etTitle.getText().toString().trim();
+                        String user = etUsername.getText().toString().trim();
+                        String pass = etPassword.getText().toString().trim();
 
-    // Yeni Klasör Oluşturma Dialogu
-    private void showAddFolderDialog() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 10);
+                        if (title.isEmpty() || user.isEmpty() || pass.isEmpty()) {
+                            Toast.makeText(this, "Tüm alanları doldurun", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
 
-        final EditText etFolderName = new EditText(this);
-        etFolderName.setHint("Klasör Adı");
-        layout.addView(etFolderName);
+                        int selectedPos = spinnerCategory.getSelectedItemPosition();
+                        int catId = categories.get(selectedPos).id;
 
-        final CheckBox cbIsHidden = new CheckBox(this);
-        cbIsHidden.setText("Gizli Klasör (Şifreli)");
-        layout.addView(cbIsHidden);
+                        new Thread(() -> {
+                            db.accountDao().insert(new Account(title, user, pass, catId));
+                            runOnUiThread(() -> {
+                                updateAccountList();
+                                dialog.dismiss();
+                                Toast.makeText(this, "Hesap kaydedildi", Toast.LENGTH_SHORT).show();
+                            });
+                        }).start();
+                    });
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, "Dialog hatası", Toast.LENGTH_SHORT).show());
+            }
+        }).start();
 
-        new AlertDialog.Builder(this)
-                .setTitle("Yeni Klasör")
-                .setView(layout)
-                .setPositiveButton("Oluştur", (dialog, which) -> {
-                    String name = etFolderName.getText().toString();
-                    if (!name.isEmpty()) {
-                        Category newCat = new Category(name, cbIsHidden.isChecked());
-                        db.categoryDao().insert(newCat);
-                        Toast.makeText(this, "Klasör oluşturuldu!", Toast.LENGTH_SHORT).show();
-                    }
-                })
-                .setNegativeButton("İptal", null)
-                .show();
-    }
-
-    // Yeni Hesap Ekleme Dialogu
-    private void showAddAccountDialog() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(50, 40, 50, 10);
-
-        final EditText etSite = new EditText(this);
-        etSite.setHint("Site Adı");
-        layout.addView(etSite);
-
-        final EditText etUser = new EditText(this);
-        etUser.setHint("Kullanıcı Adı");
-        layout.addView(etUser);
-
-        final EditText etPass = new EditText(this);
-        etPass.setHint("Şifre");
-        layout.addView(etPass);
-
-        // Kategori seçimi için Spinner
-        final Spinner spinner = new Spinner(this);
-        List<Category> categories = db.categoryDao().getAll();
-        List<String> catNames = new ArrayList<>();
-        for (Category c : categories) catNames.add(c.name);
-
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, catNames);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner.setAdapter(adapter);
-        layout.addView(spinner);
-
-        new AlertDialog.Builder(this)
-                .setTitle("Yeni Hesap Bilgisi")
-                .setView(layout)
-                .setPositiveButton("Kaydet", (dialog, which) -> {
-                    String site = etSite.getText().toString();
-                    String user = etUser.getText().toString();
-                    String pass = etPass.getText().toString();
-                    int catId = categories.get(spinner.getSelectedItemPosition()).id;
-
-                    if (!site.isEmpty() && !pass.isEmpty()) {
-                        Account account = new Account(site, user, pass, catId);
-                        db.accountDao().insert(account);
-                        updateAccountList();
-                    }
-                })
-                .setNegativeButton("İptal", null)
-                .show();
-    }
-
-    private void checkMasterPassword() {
-        String savedPass = prefs.getString("master_password", null);
-        if (savedPass == null) {
-            showCreatePasswordDialog();
-        }
-    }
-
-    private void showCreatePasswordDialog() {
-        EditText input = new EditText(this);
-        new AlertDialog.Builder(this)
-                .setTitle("Ana Şifre Belirle")
-                .setMessage("Gizli klasörlere erişmek için bir şifre seçin.")
-                .setView(input)
-                .setCancelable(false)
-                .setPositiveButton("Kaydet", (d, w) -> {
-                    String pass = input.getText().toString();
-                    if (!pass.isEmpty()) {
-                        prefs.edit().putString("master_password", pass).apply();
-                    } else {
-                        showCreatePasswordDialog();
-                    }
-                }).show();
-    }
-
-    private void updateAccountList() {
-        List<Account> accounts = db.accountDao().getAll();
-        AccountAdapter adapter = new AccountAdapter(accounts);
-        recyclerView.setAdapter(adapter);
-    }
-
-    public void loadAccountsByCategory(int categoryId) {
-        List<Account> accounts = db.accountDao().getAccountsByCategory(categoryId);
-        AccountAdapter adapter = new AccountAdapter(accounts);
-        recyclerView.setAdapter(adapter);
+        dialog.show();
     }
 }
