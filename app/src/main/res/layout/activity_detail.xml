@@ -7,35 +7,48 @@
     android:background="@color/background">
 
     <TextView
-        android:id="@+id/tvDetailTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="24sp"
+        android:text="Düzenle"
+        android:textSize="20sp"
         android:textStyle="bold"
-        android:textColor="@color/text_primary" />
+        android:layout_marginBottom="24dp"/>
 
-    <TextView
-        android:id="@+id/tvDetailUsername"
+    <EditText
+        android:id="@+id/etDetailTitle"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:textSize="18sp"
-        android:textColor="@color/text_secondary" />
+        android:hint="Site Adı" />
 
-    <TextView
-        android:id="@+id/tvDetailPassword"
+    <EditText
+        android:id="@+id/etDetailUsername"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:textSize="18sp"
-        android:textColor="@color/text_secondary" />
+        android:layout_marginTop="16dp"
+        android:hint="Kullanıcı Adı" />
+
+    <EditText
+        android:id="@+id/etDetailPassword"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:hint="Şifre" />
+
+    <Button
+        android:id="@+id/btnUpdate"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="32dp"
+        android:text="GÜNCELLE"
+        android:backgroundTint="@color/primary"
+        android:textColor="@color/white" />
 
     <Button
         android:id="@+id/btnDelete"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:layout_marginTop="48dp"
-        android:text="HESABI SİL"
+        android:layout_marginTop="12dp"
+        android:text="SİL"
         android:backgroundTint="@color/error"
         android:textColor="@color/white" />
 </LinearLayout>

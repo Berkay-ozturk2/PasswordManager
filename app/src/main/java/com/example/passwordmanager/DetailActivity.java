@@ -2,46 +2,57 @@ package com.example.passwordmanager;
 
 import android.os.Bundle;
 import android.widget.Button;
-import android.widget.TextView;
+import android.widget.EditText;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class DetailActivity extends AppCompatActivity {
+    private EditText etTitle, etUser, etPass;
+    private int accountId;
+    private String category;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
-        int id = getIntent().getIntExtra("id", -1);
+        accountId = getIntent().getIntExtra("id", -1);
+        category = getIntent().getStringExtra("category");
 
-        TextView tvTitle = findViewById(R.id.tvDetailTitle);
-        TextView tvUser = findViewById(R.id.tvDetailUsername);
-        TextView tvPass = findViewById(R.id.tvDetailPassword);
-        Button btnDelete = findViewById(R.id.btnDelete);
+        etTitle = findViewById(R.id.etDetailTitle);
+        etUser = findViewById(R.id.etDetailUsername);
+        etPass = findViewById(R.id.etDetailPassword);
 
-        if (getIntent() != null) {
-            tvTitle.setText(getIntent().getStringExtra("title"));
-            tvUser.setText(getIntent().getStringExtra("username"));
-            tvPass.setText(getIntent().getStringExtra("password"));
-        }
+        etTitle.setText(getIntent().getStringExtra("title"));
+        etUser.setText(getIntent().getStringExtra("username"));
+        etPass.setText(getIntent().getStringExtra("password"));
 
-        if (btnDelete != null) {
-            btnDelete.setOnClickListener(v -> {
-                new AlertDialog.Builder(this)
-                        .setTitle("Hesabı Sil")
-                        .setMessage("Bu hesabı silmek istediğinize emin misiniz?")
-                        .setPositiveButton("Evet", (dialog, which) -> {
-                            new Thread(() -> {
-                                AppDatabase.getInstance(this).accountDao().deleteById(id);
-                                runOnUiThread(() -> {
-                                    Toast.makeText(this, "Hesap silindi", Toast.LENGTH_SHORT).show();
-                                    finish();
-                                });
-                            }).start();
-                        })
-                        .setNegativeButton("Hayır", null).show();
-            });
-        }
+        findViewById(R.id.btnUpdate).setOnClickListener(v -> {
+            String t = etTitle.getText().toString().trim();
+            String u = etUser.getText().toString().trim();
+            String p = etPass.getText().toString().trim();
+            if (!t.isEmpty() && !u.isEmpty() && !p.isEmpty()) {
+                new Thread(() -> {
+                    Account updated = new Account(t, u, p, category);
+                    updated.id = accountId;
+                    AppDatabase.getInstance(this).accountDao().update(updated);
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Güncellendi", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                }).start();
+            }
+        });
+
+        findViewById(R.id.btnDelete).setOnClickListener(v -> {
+            new AlertDialog.Builder(this).setTitle("Sil").setMessage("Emin misiniz?")
+                    .setPositiveButton("Evet", (dialog, which) -> {
+                        new Thread(() -> {
+                            AppDatabase.getInstance(this).accountDao().deleteById(accountId);
+                            runOnUiThread(() -> { finish(); });
+                        }).start();
+                    }).setNegativeButton("Hayır", null).show();
+        });
     }
 }

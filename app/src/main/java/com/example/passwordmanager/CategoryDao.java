@@ -16,4 +16,7 @@ public interface CategoryDao {
 
     @Delete
     void delete(Category category);
+
+    @Query("DELETE FROM categories WHERE name = :categoryName")
+    void deleteByName(String categoryName);
 }

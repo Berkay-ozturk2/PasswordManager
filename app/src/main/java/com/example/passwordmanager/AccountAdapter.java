@@ -41,6 +41,7 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
             intent.putExtra("title", account.title);
             intent.putExtra("username", account.username);
             intent.putExtra("password", account.password);
+            intent.putExtra("category", account.category);
             v.getContext().startActivity(intent);
         });
     }

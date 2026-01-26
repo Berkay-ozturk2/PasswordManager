@@ -11,9 +11,9 @@ import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
+import androidx.appcompat.widget.SearchView; // Arama için eklendi
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -31,10 +31,46 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
+        // --- ARAMA ÖZELLİĞİ KURULUMU ---
+        SearchView searchView = findViewById(R.id.searchView);
+        if (searchView != null) {
+            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String query) {
+                    performSearch(query);
+                    return true;
+                }
+
+                @Override
+                public boolean onQueryTextChange(String newText) {
+                    performSearch(newText);
+                    return true;
+                }
+            });
+        }
+
         findViewById(R.id.fabAdd).setOnClickListener(v -> showAddAccountDialog());
         findViewById(R.id.fabFolders).setOnClickListener(v -> showCategoryPopupMenu(v));
 
         ensureDefaultCategoriesAndLoad();
+    }
+
+    // Arama işlemini gerçekleştiren metod
+    private void performSearch(String query) {
+        new Thread(() -> {
+            List<Account> result;
+            if (query.isEmpty()) {
+                result = db.accountDao().getAll();
+            } else {
+                // SQL LIKE sorgusu için % ekliyoruz
+                result = db.accountDao().searchAccounts("%" + query + "%");
+            }
+            runOnUiThread(() -> {
+                if (adapter != null) {
+                    adapter.updateAccounts(result);
+                }
+            });
+        }).start();
     }
 
     private void showCategoryPopupMenu(View view) {
@@ -43,13 +79,16 @@ public class MainActivity extends AppCompatActivity {
             runOnUiThread(() -> {
                 PopupMenu popupMenu = new PopupMenu(this, view);
                 popupMenu.getMenu().add(0, 0, 0, "+ Yeni Kategori Ekle");
-                popupMenu.getMenu().add(0, 1, 1, "Tümü");
+                popupMenu.getMenu().add(0, 1, 1, "- Kategori Sil");
+                popupMenu.getMenu().add(0, 2, 2, "Tümü");
                 for (Category c : categories) {
-                    popupMenu.getMenu().add(0, c.id + 100, 2, c.name);
+                    popupMenu.getMenu().add(0, c.id + 100, 3, c.name);
                 }
                 popupMenu.setOnMenuItemClickListener(item -> {
-                    if (item.getItemId() == 0) showAddCategoryDialog();
-                    else if (item.getItemId() == 1) updateAccountList();
+                    int id = item.getItemId();
+                    if (id == 0) showAddCategoryDialog();
+                    else if (id == 1) showDeleteCategoryDialog();
+                    else if (id == 2) updateAccountList();
                     else filterAccountsByCategory(item.getTitle().toString());
                     return true;
                 });
@@ -74,6 +113,29 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         dialog.show();
+    }
+
+    private void showDeleteCategoryDialog() {
+        new Thread(() -> {
+            List<Category> categories = db.categoryDao().getAll();
+            List<String> names = new ArrayList<>();
+            for (Category c : categories) names.add(c.name);
+            runOnUiThread(() -> {
+                if (names.isEmpty()) return;
+                new AlertDialog.Builder(this)
+                        .setTitle("Kategori Sil")
+                        .setItems(names.toArray(new String[0]), (dialog, which) -> {
+                            String selected = names.get(which);
+                            new Thread(() -> {
+                                db.categoryDao().deleteByName(selected);
+                                runOnUiThread(() -> {
+                                    Toast.makeText(this, "Kategori silindi", Toast.LENGTH_SHORT).show();
+                                    updateAccountList();
+                                });
+                            }).start();
+                        }).show();
+            });
+        }).start();
     }
 
     private void filterAccountsByCategory(String categoryName) {
@@ -114,9 +176,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void showAddAccountDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_account, null);
-
         EditText etTitle = view.findViewById(R.id.etTitle);
         EditText etUsername = view.findViewById(R.id.etUsername);
         EditText etPassword = view.findViewById(R.id.etPassword);
@@ -134,13 +194,11 @@ public class MainActivity extends AppCompatActivity {
             });
         }).start();
 
-        builder.setView(view);
-        AlertDialog dialog = builder.create();
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
         btnSave.setOnClickListener(v -> {
             String title = etTitle.getText().toString().trim();
             String user = etUsername.getText().toString().trim();
             String pass = etPassword.getText().toString().trim();
-
             Object selected = spinnerCategory.getSelectedItem();
             String cat = (selected != null) ? selected.toString() : "Genel";
 
@@ -150,8 +208,6 @@ public class MainActivity extends AppCompatActivity {
                     updateAccountList();
                     runOnUiThread(dialog::dismiss);
                 }).start();
-            } else {
-                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
             }
         });
         dialog.show();
