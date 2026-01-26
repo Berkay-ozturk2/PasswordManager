@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.core.splashscreen.SplashScreen; // Splash Screen için gerekli import
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
@@ -67,7 +68,10 @@ public class MainActivity extends AppCompatActivity {
             if (query.isEmpty()) {
                 result = db.accountDao().getAll();
             } else {
-                result = db.accountDao().searchAccounts("%" + query + "%");
+                // Türkçe karakterlere uygun arama sorgusu oluşturma
+                // query.toLowerCase() yerine Locale.forLanguageTag("tr") kullanıyoruz
+                String turkishQuery = "%" + query.toLowerCase(new Locale("tr", "TR")) + "%";
+                result = db.accountDao().searchAccounts(turkishQuery);
             }
             runOnUiThread(() -> {
                 if (adapter != null) {

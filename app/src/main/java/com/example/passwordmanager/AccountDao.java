@@ -16,7 +16,7 @@ public interface AccountDao {
     List<Account> getAccountsByCategory(String categoryName);
 
     // Arama özelliği için eklenen sorgu
-    @Query("SELECT * FROM accounts WHERE title LIKE :query")
+    @Query("SELECT * FROM accounts WHERE LOWER(title) LIKE LOWER(:query)")
     List<Account> searchAccounts(String query);
 
     @Insert
