@@ -8,6 +8,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
+import androidx.appcompat.widget.PopupMenu; // PopupMenu için eklendi
 
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -31,17 +32,64 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        FloatingActionButton fab = findViewById(R.id.fabAdd);
-        if (fab != null) {
-            fab.setOnClickListener(v -> showAddAccountDialog());
+        // Ekleme butonu (Artı ikonu)
+        FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
+        if (fabAdd != null) {
+            fabAdd.setOnClickListener(v -> showAddAccountDialog());
+        }
+
+        // Klasör/Kategori butonu (Sol üstteki buton)
+        FloatingActionButton fabFolders = findViewById(R.id.fabFolders);
+        if (fabFolders != null) {
+            fabFolders.setOnClickListener(v -> showCategoryPopupMenu(v));
         }
 
         ensureDefaultCategoriesAndLoad();
     }
 
+    // Kategorileri gösteren Popup Menü
+    private void showCategoryPopupMenu(View view) {
+        new Thread(() -> {
+            List<Category> categories = db.categoryDao().getAll();
+            runOnUiThread(() -> {
+                PopupMenu popupMenu = new PopupMenu(this, view);
+
+                // Varsayılan olarak "Tümü" seçeneğini ekle
+                popupMenu.getMenu().add("Tümü");
+
+                // Veritabanındaki diğer kategorileri ekle
+                for (Category category : categories) {
+                    popupMenu.getMenu().add(category.name);
+                }
+
+                popupMenu.setOnMenuItemClickListener(item -> {
+                    String selectedCategory = item.getTitle().toString();
+                    if (selectedCategory.equals("Tümü")) {
+                        updateAccountList(); // Tüm listeyi getir
+                    } else {
+                        filterAccountsByCategory(selectedCategory); // Filtrele
+                    }
+                    return true;
+                });
+                popupMenu.show();
+            });
+        }).start();
+    }
+
+    // Seçilen kategoriye göre filtreleme yapma
+    private void filterAccountsByCategory(String categoryName) {
+        new Thread(() -> {
+            List<Account> filteredAccounts = db.accountDao().getAccountsByCategory(categoryName);
+            runOnUiThread(() -> {
+                if (adapter != null) {
+                    adapter.updateAccounts(filteredAccounts);
+                }
+            });
+        }).start();
+    }
+
     private void ensureDefaultCategoriesAndLoad() {
         new Thread(() -> {
-            // CategoryDao içindeki doğru metod (getAll) çağrıldı
             if (db.categoryDao().getAll().isEmpty()) {
                 db.categoryDao().insert(new Category("Sosyal Medya", false));
                 db.categoryDao().insert(new Category("E-Posta", false));
@@ -76,7 +124,6 @@ public class MainActivity extends AppCompatActivity {
         Button btnSave = view.findViewById(R.id.btnSave);
 
         new Thread(() -> {
-            // HATA DÜZELTİLDİ: getAllCategoriesSync yerine getAll kullanıldı
             List<Category> categories = db.categoryDao().getAll();
             List<String> categoryNames = new ArrayList<>();
             for (Category c : categories) {
@@ -109,7 +156,6 @@ public class MainActivity extends AppCompatActivity {
             new Thread(() -> {
                 Account newAccount = new Account(title, username, password, category);
                 db.accountDao().insert(newAccount);
-
                 updateAccountList();
                 runOnUiThread(dialog::dismiss);
             }).start();
