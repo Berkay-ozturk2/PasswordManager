@@ -2,16 +2,16 @@ package com.example.passwordmanager;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
-import androidx.appcompat.widget.PopupMenu; // PopupMenu için eklendi
-
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
@@ -32,43 +32,26 @@ public class MainActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Ekleme butonu (Artı ikonu)
-        FloatingActionButton fabAdd = findViewById(R.id.fabAdd);
-        if (fabAdd != null) {
-            fabAdd.setOnClickListener(v -> showAddAccountDialog());
-        }
-
-        // Klasör/Kategori butonu (Sol üstteki buton)
-        FloatingActionButton fabFolders = findViewById(R.id.fabFolders);
-        if (fabFolders != null) {
-            fabFolders.setOnClickListener(v -> showCategoryPopupMenu(v));
-        }
+        findViewById(R.id.fabAdd).setOnClickListener(v -> showAddAccountDialog());
+        findViewById(R.id.fabFolders).setOnClickListener(v -> showCategoryPopupMenu(v));
 
         ensureDefaultCategoriesAndLoad();
     }
 
-    // Kategorileri gösteren Popup Menü
     private void showCategoryPopupMenu(View view) {
         new Thread(() -> {
             List<Category> categories = db.categoryDao().getAll();
             runOnUiThread(() -> {
                 PopupMenu popupMenu = new PopupMenu(this, view);
-
-                // Varsayılan olarak "Tümü" seçeneğini ekle
-                popupMenu.getMenu().add("Tümü");
-
-                // Veritabanındaki diğer kategorileri ekle
-                for (Category category : categories) {
-                    popupMenu.getMenu().add(category.name);
+                popupMenu.getMenu().add(0, 0, 0, "+ Yeni Kategori Ekle");
+                popupMenu.getMenu().add(0, 1, 1, "Tümü");
+                for (Category c : categories) {
+                    popupMenu.getMenu().add(0, c.id + 100, 2, c.name);
                 }
-
                 popupMenu.setOnMenuItemClickListener(item -> {
-                    String selectedCategory = item.getTitle().toString();
-                    if (selectedCategory.equals("Tümü")) {
-                        updateAccountList(); // Tüm listeyi getir
-                    } else {
-                        filterAccountsByCategory(selectedCategory); // Filtrele
-                    }
+                    if (item.getItemId() == 0) showAddCategoryDialog();
+                    else if (item.getItemId() == 1) updateAccountList();
+                    else filterAccountsByCategory(item.getTitle().toString());
                     return true;
                 });
                 popupMenu.show();
@@ -76,26 +59,25 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    // Seçilen kategoriye göre filtreleme yapma
-    private void filterAccountsByCategory(String categoryName) {
-        new Thread(() -> {
-            List<Account> filteredAccounts = db.accountDao().getAccountsByCategory(categoryName);
-            runOnUiThread(() -> {
-                if (adapter != null) {
-                    adapter.updateAccounts(filteredAccounts);
-                }
-            });
-        }).start();
+    private void showAddCategoryDialog() {
+        View v = LayoutInflater.from(this).inflate(R.layout.dialog_add_category, null);
+        AlertDialog dialog = new AlertDialog.Builder(this).setView(v).create();
+        v.findViewById(R.id.btnSaveCategory).setOnClickListener(view -> {
+            String name = ((EditText)v.findViewById(R.id.etCategoryName)).getText().toString().trim();
+            if (!name.isEmpty()) {
+                new Thread(() -> {
+                    db.categoryDao().insert(new Category(name, false));
+                    runOnUiThread(dialog::dismiss);
+                }).start();
+            }
+        });
+        dialog.show();
     }
 
-    private void ensureDefaultCategoriesAndLoad() {
+    private void filterAccountsByCategory(String categoryName) {
         new Thread(() -> {
-            if (db.categoryDao().getAll().isEmpty()) {
-                db.categoryDao().insert(new Category("Sosyal Medya", false));
-                db.categoryDao().insert(new Category("E-Posta", false));
-                db.categoryDao().insert(new Category("Banka", false));
-            }
-            updateAccountList();
+            List<Account> filtered = db.accountDao().getAccountsByCategory(categoryName);
+            runOnUiThread(() -> adapter.updateAccounts(filtered));
         }).start();
     }
 
@@ -106,17 +88,30 @@ public class MainActivity extends AppCompatActivity {
                 if (adapter == null) {
                     adapter = new AccountAdapter(accounts);
                     recyclerView.setAdapter(adapter);
-                } else {
-                    adapter.updateAccounts(accounts);
-                }
+                } else adapter.updateAccounts(accounts);
             });
         }).start();
+    }
+
+    private void ensureDefaultCategoriesAndLoad() {
+        new Thread(() -> {
+            if (db.categoryDao().getAll().isEmpty()) {
+                db.categoryDao().insert(new Category("Sosyal Medya", false));
+                db.categoryDao().insert(new Category("Banka", false));
+            }
+            updateAccountList();
+        }).start();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateAccountList();
     }
 
     private void showAddAccountDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_account, null);
-
         EditText etTitle = view.findViewById(R.id.etTitle);
         EditText etUsername = view.findViewById(R.id.etUsername);
         EditText etPassword = view.findViewById(R.id.etPassword);
@@ -125,14 +120,10 @@ public class MainActivity extends AppCompatActivity {
 
         new Thread(() -> {
             List<Category> categories = db.categoryDao().getAll();
-            List<String> categoryNames = new ArrayList<>();
-            for (Category c : categories) {
-                categoryNames.add(c.name);
-            }
-
+            List<String> names = new ArrayList<>();
+            for (Category c : categories) names.add(c.name);
             runOnUiThread(() -> {
-                ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this,
-                        android.R.layout.simple_spinner_item, categoryNames);
+                ArrayAdapter<String> catAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_item, names);
                 catAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 spinnerCategory.setAdapter(catAdapter);
             });
@@ -140,27 +131,19 @@ public class MainActivity extends AppCompatActivity {
 
         builder.setView(view);
         AlertDialog dialog = builder.create();
-
         btnSave.setOnClickListener(v -> {
             String title = etTitle.getText().toString().trim();
-            String username = etUsername.getText().toString().trim();
-            String password = etPassword.getText().toString().trim();
-            String category = (spinnerCategory.getSelectedItem() != null) ?
-                    spinnerCategory.getSelectedItem().toString() : "";
-
-            if (title.isEmpty() || username.isEmpty() || password.isEmpty()) {
-                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
-                return;
+            String user = etUsername.getText().toString().trim();
+            String pass = etPassword.getText().toString().trim();
+            String cat = spinnerCategory.getSelectedItem().toString();
+            if (!title.isEmpty() && !user.isEmpty() && !pass.isEmpty()) {
+                new Thread(() -> {
+                    db.accountDao().insert(new Account(title, user, pass, cat));
+                    updateAccountList();
+                    runOnUiThread(dialog::dismiss);
+                }).start();
             }
-
-            new Thread(() -> {
-                Account newAccount = new Account(title, username, password, category);
-                db.accountDao().insert(newAccount);
-                updateAccountList();
-                runOnUiThread(dialog::dismiss);
-            }).start();
         });
-
         dialog.show();
     }
 }
