@@ -62,7 +62,7 @@ public class MainActivity extends AppCompatActivity {
             startBiometricPrompt();
         } else {
             // Cihazda hiç şifre yok, uyarı ver ve içeri al
-            Toast.makeText(this, "Güvenlik Uyarısı: Cihazda ekran kilidi tanımlı değil.", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Şifresiz giriş ", Toast.LENGTH_LONG).show();
             enterApp();
         }
     }
