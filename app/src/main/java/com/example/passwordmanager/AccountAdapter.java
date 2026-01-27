@@ -1,10 +1,15 @@
 package com.example.passwordmanager;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
@@ -16,7 +21,6 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
         this.accountList = accountList;
     }
 
-    // Listeyi güncellemek için bu metod eklendi
     public void updateAccounts(List<Account> newAccounts) {
         this.accountList = newAccounts;
         notifyDataSetChanged();
@@ -35,6 +39,7 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
         holder.tvSiteName.setText(account.title);
         holder.tvUsername.setText(account.username);
 
+        // Detay sayfasına gitme
         holder.itemView.setOnClickListener(v -> {
             Intent intent = new Intent(v.getContext(), DetailActivity.class);
             intent.putExtra("id", account.id);
@@ -43,6 +48,17 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
             intent.putExtra("password", account.password);
             intent.putExtra("category", account.category);
             v.getContext().startActivity(intent);
+        });
+
+        // Hızlı şifre kopyalama işlemi
+        holder.btnQuickCopy.setOnClickListener(v -> {
+            CryptoHelper crypto = new CryptoHelper();
+            String decryptedPassword = crypto.decrypt(account.password); // Çözülmüş şifre
+
+            ClipboardManager clipboard = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Password", decryptedPassword);
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(v.getContext(), "Şifre çözüldü ve kopyalandı", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -53,10 +69,13 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
 
     public static class AccountViewHolder extends RecyclerView.ViewHolder {
         TextView tvSiteName, tvUsername;
+        ImageButton btnQuickCopy;
+
         public AccountViewHolder(@NonNull View itemView) {
             super(itemView);
             tvSiteName = itemView.findViewById(R.id.tvSiteName);
             tvUsername = itemView.findViewById(R.id.tvUsername);
+            btnQuickCopy = itemView.findViewById(R.id.btnQuickCopy);
         }
     }
 }

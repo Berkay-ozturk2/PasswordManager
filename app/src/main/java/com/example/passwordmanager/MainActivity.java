@@ -223,7 +223,11 @@ public class MainActivity extends AppCompatActivity {
 
             if (!title.isEmpty() && !user.isEmpty() && !pass.isEmpty()) {
                 new Thread(() -> {
-                    db.accountDao().insert(new Account(title, user, pass, cat));
+                    // DÜZELTME: Kaydetmeden önce şifrele
+                    CryptoHelper cryptoHelper = new CryptoHelper();
+                    String encryptedPass = cryptoHelper.encrypt(pass);
+
+                    db.accountDao().insert(new Account(title, user, encryptedPass, cat));
                     updateAccountList();
                     runOnUiThread(dialog::dismiss);
                 }).start();
