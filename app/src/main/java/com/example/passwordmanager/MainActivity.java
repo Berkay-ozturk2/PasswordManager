@@ -14,7 +14,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SearchView;
-import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricManager; // Eklendi
 import androidx.biometric.BiometricPrompt;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -36,9 +36,7 @@ public class MainActivity extends AppCompatActivity {
         SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
 
-        // GÜVENLİ EKRAN: Ekran görüntüsü engelleme
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-
         setContentView(R.layout.activity_main);
 
         mainLayout = findViewById(R.id.recyclerView);
@@ -49,42 +47,60 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         setupUI();
-        checkAuthentication();
+        checkAuthentication(); // Kontrol burada başlıyor
     }
 
     private void checkAuthentication() {
+        BiometricManager biometricManager = BiometricManager.from(this);
+
+        // Cihazda biyometrik veri veya PIN/Desen tanımlı mı kontrol et
+        int authStatus = biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG
+                | BiometricManager.Authenticators.DEVICE_CREDENTIAL);
+
+        if (authStatus == BiometricManager.BIOMETRIC_SUCCESS) {
+            // Cihaz güvenli, doğrulamayı başlat
+            startBiometricPrompt();
+        } else {
+            // Cihazda hiç şifre yok, uyarı ver ve içeri al
+            Toast.makeText(this, "Güvenlik Uyarısı: Cihazda ekran kilidi tanımlı değil.", Toast.LENGTH_LONG).show();
+            enterApp();
+        }
+    }
+
+    private void startBiometricPrompt() {
         Executor executor = ContextCompat.getMainExecutor(this);
         BiometricPrompt biometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
             @Override
             public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
                 super.onAuthenticationError(errorCode, errString);
                 Toast.makeText(getApplicationContext(), "Giriş Hatası: " + errString, Toast.LENGTH_SHORT).show();
-                finish();
+                finish(); // Yetkisiz girişi engellemek için kapat
             }
 
             @Override
             public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
                 super.onAuthenticationSucceeded(result);
-                runOnUiThread(() -> {
-                    mainLayout.setVisibility(View.VISIBLE);
-                    ensureDefaultCategoriesAndLoad();
-                });
-            }
-
-            @Override
-            public void onAuthenticationFailed() {
-                super.onAuthenticationFailed();
+                enterApp();
             }
         });
 
         BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
                 .setTitle("Uygulamaya Giriş")
-                .setSubtitle("Biyometrik veri veya cihaz şifresi ile giriş yapın")
+                .setSubtitle("Biyometrik veri veya cihaz şifresi kullanın")
                 .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
                 .build();
 
         biometricPrompt.authenticate(promptInfo);
     }
+
+    private void enterApp() {
+        runOnUiThread(() -> {
+            mainLayout.setVisibility(View.VISIBLE);
+            ensureDefaultCategoriesAndLoad();
+        });
+    }
+
+    // ... setupUI, performSearch ve diğer metotlar (Aynı kalacak) ...
 
     private void setupUI() {
         SearchView searchView = findViewById(R.id.searchView);
@@ -95,7 +111,6 @@ public class MainActivity extends AppCompatActivity {
             });
         }
         findViewById(R.id.fabAdd).setOnClickListener(v -> showAddAccountDialog());
-        // Hatanın çözümü: showCategoryPopupMenu metodu artık sınıf içinde tanımlı
         findViewById(R.id.fabFolders).setOnClickListener(v -> showCategoryPopupMenu(v));
     }
 
@@ -182,8 +197,10 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             List<Account> accounts = db.accountDao().getAll();
             runOnUiThread(() -> {
-                if (adapter == null) { adapter = new AccountAdapter(accounts); recyclerView.setAdapter(adapter); }
-                else adapter.updateAccounts(accounts);
+                if (adapter == null) {
+                    adapter = new AccountAdapter(accounts);
+                    recyclerView.setAdapter(adapter);
+                } else adapter.updateAccounts(accounts);
             });
         }).start();
     }
@@ -198,8 +215,6 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    @Override protected void onResume() { super.onResume(); }
-
     private void showAddAccountDialog() {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_account, null);
         EditText etTitle = view.findViewById(R.id.etTitle);
@@ -207,6 +222,7 @@ public class MainActivity extends AppCompatActivity {
         EditText etPassword = view.findViewById(R.id.etPassword);
         Spinner spinnerCategory = view.findViewById(R.id.spinnerCategory);
         Button btnSave = view.findViewById(R.id.btnSave);
+
         new Thread(() -> {
             List<Category> categories = db.categoryDao().getAll();
             List<String> names = new ArrayList<>();
@@ -217,6 +233,7 @@ public class MainActivity extends AppCompatActivity {
                 spinnerCategory.setAdapter(catAdapter);
             });
         }).start();
+
         AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
         btnSave.setOnClickListener(v -> {
             String title = etTitle.getText().toString().trim();
@@ -224,9 +241,9 @@ public class MainActivity extends AppCompatActivity {
             String pass = etPassword.getText().toString().trim();
             Object selected = spinnerCategory.getSelectedItem();
             String cat = (selected != null) ? selected.toString() : "Genel";
+
             if (!title.isEmpty() && !user.isEmpty() && !pass.isEmpty()) {
                 new Thread(() -> {
-                    // Singleton CryptoHelper kullanımı
                     String encryptedPass = CryptoHelper.getInstance().encrypt(pass);
                     db.accountDao().insert(new Account(title, user, encryptedPass, cat));
                     updateAccountList();
