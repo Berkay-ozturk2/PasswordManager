@@ -1,74 +1,34 @@
 package com.example.passwordmanager;
 
-import android.security.keystore.KeyGenParameterSpec;
-import android.security.keystore.KeyProperties;
-import android.util.Base64;
-import java.security.KeyStore;
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.Toast;
 
-public class CryptoHelper {
-    private static final String ALGORITHM = "AES/GCM/NoPadding";
-    private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
-    private static final String KEY_ALIAS = "PasswordManagerKey";
+public class ClipboardHelper {
+    private static final Handler handler = new Handler(Looper.getMainLooper());
+    private static Runnable clearRunnable;
+    private static final String LABEL = "PasswordManager";
+    private static final int CLEAR_DELAY = 180000; // 3 dakika
 
-    private static CryptoHelper instance;
-
-    // Singleton örneğini almak için statik metot
-    public static synchronized CryptoHelper getInstance() {
-        if (instance == null) {
-            instance = new CryptoHelper();
+    public static void copyToClipboard(Context context, String text, String toastMessage) {
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText(LABEL, text);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(context, toastMessage + " (3 dk sonra silinecek)", Toast.LENGTH_SHORT).show();
+            if (clearRunnable != null) handler.removeCallbacks(clearRunnable);
+            clearRunnable = () -> {
+                ClipData currentClip = clipboard.getPrimaryClip();
+                if (currentClip != null && currentClip.getDescription().getLabel() != null &&
+                        currentClip.getDescription().getLabel().equals(LABEL)) {
+                    clipboard.setPrimaryClip(ClipData.newPlainText("", ""));
+                    Toast.makeText(context, "Güvenlik için pano temizlendi", Toast.LENGTH_SHORT).show();
+                }
+            };
+            handler.postDelayed(clearRunnable, CLEAR_DELAY);
         }
-        return instance;
-    }
-
-    private CryptoHelper() {
-        try {
-            KeyStore keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
-            keyStore.load(null);
-            if (!keyStore.containsAlias(KEY_ALIAS)) {
-                KeyGenerator keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEY_STORE);
-                keyGenerator.init(new KeyGenParameterSpec.Builder(KEY_ALIAS,
-                        KeyProperties.PURPOSE_ENCRYPT | KeyProperties.PURPOSE_DECRYPT)
-                        .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
-                        .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
-                        .build());
-                keyGenerator.generateKey();
-            }
-        } catch (Exception e) { e.printStackTrace(); }
-    }
-
-    public String encrypt(String data) {
-        if (data == null) return "";
-        try {
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            cipher.init(Cipher.ENCRYPT_MODE, getSecretKey());
-            byte[] iv = cipher.getIV();
-            byte[] encryptedData = cipher.doFinal(data.getBytes("UTF-8"));
-            byte[] combined = new byte[iv.length + encryptedData.length];
-            System.arraycopy(iv, 0, combined, 0, iv.length);
-            System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
-            return Base64.encodeToString(combined, Base64.NO_WRAP);
-        } catch (Exception e) { return data; }
-    }
-
-    public String decrypt(String encryptedData) {
-        if (encryptedData == null || encryptedData.isEmpty()) return "";
-        try {
-            byte[] combined = Base64.decode(encryptedData, Base64.NO_WRAP);
-            Cipher cipher = Cipher.getInstance(ALGORITHM);
-            GCMParameterSpec spec = new GCMParameterSpec(128, combined, 0, 12);
-            cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), spec);
-            byte[] decrypted = cipher.doFinal(combined, 12, combined.length - 12);
-            return new String(decrypted, "UTF-8");
-        } catch (Exception e) { return encryptedData; }
-    }
-
-    private SecretKey getSecretKey() throws Exception {
-        KeyStore keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
-        keyStore.load(null);
-        return ((KeyStore.SecretKeyEntry) keyStore.getEntry(KEY_ALIAS, null)).getSecretKey();
     }
 }
