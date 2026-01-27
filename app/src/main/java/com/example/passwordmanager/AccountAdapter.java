@@ -1,17 +1,12 @@
 package com.example.passwordmanager;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
@@ -19,7 +14,11 @@ import java.util.List;
 public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountViewHolder> {
     private List<Account> accountList;
     public AccountAdapter(List<Account> accountList) { this.accountList = accountList; }
-    public void updateAccounts(List<Account> newAccounts) { this.accountList = newAccounts; notifyDataSetChanged(); }
+
+    public void updateAccounts(List<Account> newAccounts) {
+        this.accountList = newAccounts;
+        notifyDataSetChanged();
+    }
 
     @NonNull @Override
     public AccountViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -43,27 +42,16 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
             v.getContext().startActivity(intent);
         });
 
+        // Hızlı Şifre Kopyalama
         holder.btnQuickCopy.setOnClickListener(v -> {
             CryptoHelper crypto = new CryptoHelper();
             String decryptedPassword = crypto.decrypt(account.password);
-            ClipboardManager clipboard = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-            ClipData clip = ClipData.newPlainText("PasswordManager", decryptedPassword);
-            if (clipboard != null) {
-                clipboard.setPrimaryClip(clip);
-                Toast.makeText(v.getContext(), "Şifre kopyalandı (3 dk sonra silinecek)", Toast.LENGTH_SHORT).show();
-                new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                    ClipData currentClip = clipboard.getPrimaryClip();
-                    if (currentClip != null && currentClip.getDescription().getLabel() != null &&
-                            currentClip.getDescription().getLabel().equals("PasswordManager")) {
-                        clipboard.setPrimaryClip(ClipData.newPlainText("", ""));
-                        Toast.makeText(v.getContext(), "Güvenlik için pano temizlendi", Toast.LENGTH_SHORT).show();
-                    }
-                }, 180000);
-            }
+            ClipboardHelper.copyToClipboard(v.getContext(), decryptedPassword, "Şifre kopyalandı");
         });
     }
 
     @Override public int getItemCount() { return accountList != null ? accountList.size() : 0; }
+
     public static class AccountViewHolder extends RecyclerView.ViewHolder {
         TextView tvSiteName, tvUsername;
         ImageButton btnQuickCopy;

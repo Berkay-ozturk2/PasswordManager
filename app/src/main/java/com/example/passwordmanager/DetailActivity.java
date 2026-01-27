@@ -1,11 +1,6 @@
 package com.example.passwordmanager;
 
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.view.WindowManager;
@@ -40,12 +35,15 @@ public class DetailActivity extends AppCompatActivity {
         etPass = findViewById(R.id.etDetailPassword);
         ImageButton btnTogglePass = findViewById(R.id.btnTogglePass);
 
+        // Verileri Doldurma
         etTitle.setText(getIntent().getStringExtra("title"));
         etUser.setText(getIntent().getStringExtra("username"));
 
+        // Şifreyi çözerek gösteriyoruz
         String encryptedFromDb = getIntent().getStringExtra("password");
         etPass.setText(cryptoHelper.decrypt(encryptedFromDb));
 
+        // Şifre Gizle/Göster Butonu
         btnTogglePass.setOnClickListener(v -> {
             if (isPasswordVisible) {
                 etPass.setTransformationMethod(PasswordTransformationMethod.getInstance());
@@ -59,24 +57,37 @@ public class DetailActivity extends AppCompatActivity {
             etPass.setSelection(etPass.getText().length());
         });
 
-        findViewById(R.id.btnCopyUser).setOnClickListener(v -> copyToClipboard(etUser.getText().toString(), "Kullanıcı adı kopyalandı"));
-        findViewById(R.id.btnCopyPass).setOnClickListener(v -> copyToClipboard(etPass.getText().toString(), "Şifre kopyalandı"));
+        // Pano Kopyalama İşlemleri (ClipboardHelper kullanımı)
+        findViewById(R.id.btnCopyUser).setOnClickListener(v ->
+                ClipboardHelper.copyToClipboard(this, etUser.getText().toString(), "Kullanıcı adı kopyalandı"));
 
+        findViewById(R.id.btnCopyPass).setOnClickListener(v ->
+                ClipboardHelper.copyToClipboard(this, etPass.getText().toString(), "Şifre kopyalandı"));
+
+        // Güncelleme Butonu
         findViewById(R.id.btnUpdate).setOnClickListener(v -> {
             String t = etTitle.getText().toString().trim();
             String u = etUser.getText().toString().trim();
             String p = etPass.getText().toString().trim();
+
             if (!t.isEmpty() && !u.isEmpty() && !p.isEmpty()) {
                 new Thread(() -> {
+                    // Kaydederken CryptoHelper ile şifreleme zorunlu
                     String encryptedNewPass = cryptoHelper.encrypt(p);
                     Account updated = new Account(t, u, encryptedNewPass, category);
                     updated.id = accountId;
                     AppDatabase.getInstance(this).accountDao().update(updated);
-                    runOnUiThread(() -> { Toast.makeText(this, "Başarıyla güncellendi", Toast.LENGTH_SHORT).show(); finish(); });
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "Başarıyla güncellendi", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
                 }).start();
+            } else {
+                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
             }
         });
 
+        // Silme Butonu
         findViewById(R.id.btnDelete).setOnClickListener(v -> {
             new AlertDialog.Builder(this).setTitle("Sil").setMessage("Emin misiniz?")
                     .setPositiveButton("Evet", (d, w) -> new Thread(() -> {
@@ -84,24 +95,5 @@ public class DetailActivity extends AppCompatActivity {
                         runOnUiThread(this::finish);
                     }).start()).setNegativeButton("Hayır", null).show();
         });
-    }
-
-    private void copyToClipboard(String text, String message) {
-        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        ClipData clip = ClipData.newPlainText("PasswordManager", text);
-        if (clipboard != null) {
-            clipboard.setPrimaryClip(clip);
-            Toast.makeText(this, message + " (3 dk sonra silinecek)", Toast.LENGTH_SHORT).show();
-
-            // 3 DAKİKA SONRA PANOYU TEMİZLE
-            new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                ClipData currentClip = clipboard.getPrimaryClip();
-                if (currentClip != null && currentClip.getDescription().getLabel() != null &&
-                        currentClip.getDescription().getLabel().equals("PasswordManager")) {
-                    clipboard.setPrimaryClip(ClipData.newPlainText("", ""));
-                    Toast.makeText(this, "Güvenlik için pano temizlendi", Toast.LENGTH_SHORT).show();
-                }
-            }, 180000);
-        }
     }
 }
