@@ -15,7 +15,6 @@ public interface AccountDao {
     @Query("SELECT * FROM accounts WHERE category = :categoryName")
     List<Account> getAccountsByCategory(String categoryName);
 
-    // SQL tarafında LOWER kullanmıyoruz, çünkü Türkçe karakterleri desteklemez
     @Query("SELECT * FROM accounts WHERE title LIKE :query")
     List<Account> searchAccounts(String query);
 
@@ -27,4 +26,8 @@ public interface AccountDao {
 
     @Delete
     void delete(Account account);
+
+    // DetailActivity'de çağrılan ancak eksik olan metot eklendi:
+    @Query("DELETE FROM accounts WHERE id = :accountId")
+    void deleteById(int accountId);
 }

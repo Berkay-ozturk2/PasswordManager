@@ -1,7 +1,6 @@
 package com.example.passwordmanager;
 
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 import androidx.appcompat.app.AlertDialog;
@@ -17,6 +16,7 @@ public class DetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detail);
 
+        // Intent'ten verileri güvenli bir şekilde alıyoruz
         accountId = getIntent().getIntExtra("id", -1);
         category = getIntent().getStringExtra("category");
 
@@ -28,10 +28,12 @@ public class DetailActivity extends AppCompatActivity {
         etUser.setText(getIntent().getStringExtra("username"));
         etPass.setText(getIntent().getStringExtra("password"));
 
+        // GÜNCELLEME BUTONU
         findViewById(R.id.btnUpdate).setOnClickListener(v -> {
             String t = etTitle.getText().toString().trim();
             String u = etUser.getText().toString().trim();
             String p = etPass.getText().toString().trim();
+
             if (!t.isEmpty() && !u.isEmpty() && !p.isEmpty()) {
                 new Thread(() -> {
                     Account updated = new Account(t, u, p, category);
@@ -42,17 +44,25 @@ public class DetailActivity extends AppCompatActivity {
                         finish();
                     });
                 }).start();
+            } else {
+                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
             }
         });
 
+        // SİLME BUTONU
         findViewById(R.id.btnDelete).setOnClickListener(v -> {
-            new AlertDialog.Builder(this).setTitle("Sil").setMessage("Emin misiniz?")
+            new AlertDialog.Builder(this)
+                    .setTitle("Sil")
+                    .setMessage("Bu hesabı silmek istediğinize emin misiniz?")
                     .setPositiveButton("Evet", (dialog, which) -> {
                         new Thread(() -> {
+                            // Artık AccountDao'da bu metot tanımlı olduğu için hata vermeyecektir
                             AppDatabase.getInstance(this).accountDao().deleteById(accountId);
-                            runOnUiThread(() -> { finish(); });
+                            runOnUiThread(this::finish);
                         }).start();
-                    }).setNegativeButton("Hayır", null).show();
+                    })
+                    .setNegativeButton("Hayır", null)
+                    .show();
         });
     }
 }
