@@ -16,10 +16,15 @@ public class ClipboardHelper {
     public static void copyToClipboard(Context context, String text, String toastMessage) {
         ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
         ClipData clip = ClipData.newPlainText(LABEL, text);
+
         if (clipboard != null) {
             clipboard.setPrimaryClip(clip);
             Toast.makeText(context, toastMessage + " (3 dk sonra silinecek)", Toast.LENGTH_SHORT).show();
-            if (clearRunnable != null) handler.removeCallbacks(clearRunnable);
+
+            if (clearRunnable != null) {
+                handler.removeCallbacks(clearRunnable);
+            }
+
             clearRunnable = () -> {
                 ClipData currentClip = clipboard.getPrimaryClip();
                 if (currentClip != null && currentClip.getDescription().getLabel() != null &&
@@ -28,6 +33,7 @@ public class ClipboardHelper {
                     Toast.makeText(context, "Güvenlik için pano temizlendi", Toast.LENGTH_SHORT).show();
                 }
             };
+
             handler.postDelayed(clearRunnable, CLEAR_DELAY);
         }
     }
