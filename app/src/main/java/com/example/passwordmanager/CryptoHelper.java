@@ -14,7 +14,18 @@ public class CryptoHelper {
     private static final String ANDROID_KEY_STORE = "AndroidKeyStore";
     private static final String KEY_ALIAS = "PasswordManagerKey";
 
-    public CryptoHelper() {
+    private static CryptoHelper instance;
+
+    // Singleton örneğini almak için statik metot
+    public static synchronized CryptoHelper getInstance() {
+        if (instance == null) {
+            instance = new CryptoHelper();
+        }
+        return instance;
+    }
+
+    // Yapıcı metot private yapıldı
+    private CryptoHelper() {
         try {
             KeyStore keyStore = KeyStore.getInstance(ANDROID_KEY_STORE);
             keyStore.load(null);
@@ -40,7 +51,7 @@ public class CryptoHelper {
             byte[] combined = new byte[iv.length + encryptedData.length];
             System.arraycopy(iv, 0, combined, 0, iv.length);
             System.arraycopy(encryptedData, 0, combined, iv.length, encryptedData.length);
-            return Base64.encodeToString(combined, Base64.NO_WRAP); // NO_WRAP daha güvenlidir
+            return Base64.encodeToString(combined, Base64.NO_WRAP);
         } catch (Exception e) { return data; }
     }
 
@@ -53,7 +64,7 @@ public class CryptoHelper {
             cipher.init(Cipher.DECRYPT_MODE, getSecretKey(), spec);
             byte[] decrypted = cipher.doFinal(combined, 12, combined.length - 12);
             return new String(decrypted, "UTF-8");
-        } catch (Exception e) { return encryptedData; } // Hata alırsan orijinali döndür (eski kayıtlar için)
+        } catch (Exception e) { return encryptedData; }
     }
 
     private SecretKey getSecretKey() throws Exception {

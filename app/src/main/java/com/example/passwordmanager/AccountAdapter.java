@@ -42,10 +42,9 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
             v.getContext().startActivity(intent);
         });
 
-        // Hızlı Şifre Kopyalama
         holder.btnQuickCopy.setOnClickListener(v -> {
-            CryptoHelper crypto = new CryptoHelper();
-            String decryptedPassword = crypto.decrypt(account.password);
+            // Singleton CryptoHelper ve Merkezi ClipboardHelper
+            String decryptedPassword = CryptoHelper.getInstance().decrypt(account.password);
             ClipboardHelper.copyToClipboard(v.getContext(), decryptedPassword, "Şifre kopyalandı");
         });
     }

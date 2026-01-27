@@ -15,18 +15,13 @@ public class DetailActivity extends AppCompatActivity {
     private int accountId;
     private String category;
     private boolean isPasswordVisible = false;
-    private CryptoHelper cryptoHelper;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        // GÜVENLİ EKRAN: Ekran görüntüsü engelleme
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
-
         setContentView(R.layout.activity_detail);
 
-        cryptoHelper = new CryptoHelper();
         accountId = getIntent().getIntExtra("id", -1);
         category = getIntent().getStringExtra("category");
 
@@ -35,15 +30,13 @@ public class DetailActivity extends AppCompatActivity {
         etPass = findViewById(R.id.etDetailPassword);
         ImageButton btnTogglePass = findViewById(R.id.btnTogglePass);
 
-        // Verileri Doldurma
         etTitle.setText(getIntent().getStringExtra("title"));
         etUser.setText(getIntent().getStringExtra("username"));
 
-        // Şifreyi çözerek gösteriyoruz
+        // Singleton Decrypt
         String encryptedFromDb = getIntent().getStringExtra("password");
-        etPass.setText(cryptoHelper.decrypt(encryptedFromDb));
+        etPass.setText(CryptoHelper.getInstance().decrypt(encryptedFromDb));
 
-        // Şifre Gizle/Göster Butonu
         btnTogglePass.setOnClickListener(v -> {
             if (isPasswordVisible) {
                 etPass.setTransformationMethod(PasswordTransformationMethod.getInstance());
@@ -57,37 +50,28 @@ public class DetailActivity extends AppCompatActivity {
             etPass.setSelection(etPass.getText().length());
         });
 
-        // Pano Kopyalama İşlemleri (ClipboardHelper kullanımı)
+        // Merkezi Kopyalama
         findViewById(R.id.btnCopyUser).setOnClickListener(v ->
                 ClipboardHelper.copyToClipboard(this, etUser.getText().toString(), "Kullanıcı adı kopyalandı"));
 
         findViewById(R.id.btnCopyPass).setOnClickListener(v ->
                 ClipboardHelper.copyToClipboard(this, etPass.getText().toString(), "Şifre kopyalandı"));
 
-        // Güncelleme Butonu
         findViewById(R.id.btnUpdate).setOnClickListener(v -> {
             String t = etTitle.getText().toString().trim();
             String u = etUser.getText().toString().trim();
             String p = etPass.getText().toString().trim();
-
             if (!t.isEmpty() && !u.isEmpty() && !p.isEmpty()) {
                 new Thread(() -> {
-                    // Kaydederken CryptoHelper ile şifreleme zorunlu
-                    String encryptedNewPass = cryptoHelper.encrypt(p);
+                    String encryptedNewPass = CryptoHelper.getInstance().encrypt(p);
                     Account updated = new Account(t, u, encryptedNewPass, category);
                     updated.id = accountId;
                     AppDatabase.getInstance(this).accountDao().update(updated);
-                    runOnUiThread(() -> {
-                        Toast.makeText(this, "Başarıyla güncellendi", Toast.LENGTH_SHORT).show();
-                        finish();
-                    });
+                    runOnUiThread(() -> { Toast.makeText(this, "Güncellendi", Toast.LENGTH_SHORT).show(); finish(); });
                 }).start();
-            } else {
-                Toast.makeText(this, "Lütfen tüm alanları doldurun", Toast.LENGTH_SHORT).show();
             }
         });
 
-        // Silme Butonu
         findViewById(R.id.btnDelete).setOnClickListener(v -> {
             new AlertDialog.Builder(this).setTitle("Sil").setMessage("Emin misiniz?")
                     .setPositiveButton("Evet", (d, w) -> new Thread(() -> {
