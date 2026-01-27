@@ -3,90 +3,124 @@ package com.example.passwordmanager;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.appcompat.widget.SearchView;
+import androidx.biometric.BiometricManager;
+import androidx.biometric.BiometricPrompt;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.core.splashscreen.SplashScreen; // Splash Screen için gerekli import
+import androidx.core.splashscreen.SplashScreen;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-
+import java.util.concurrent.Executor;
 
 public class MainActivity extends AppCompatActivity {
     private RecyclerView recyclerView;
     private AccountAdapter adapter;
     private AppDatabase db;
+    private View mainLayout; // İçeriği gizlemek için
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // 1. ADIM: Splash Screen'i yükle (super.onCreate ve setContentView'dan ÖNCE olmalı)
         SplashScreen.installSplashScreen(this);
-
         super.onCreate(savedInstanceState);
+
+        // GÜVENLİ EKRAN: Ekran görüntüsü engelleme
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
+
         setContentView(R.layout.activity_main);
+
+        // Başlangıçta içeriği gizleyelim
+        mainLayout = findViewById(R.id.recyclerView);
+        mainLayout.setVisibility(View.GONE);
 
         db = AppDatabase.getInstance(this);
         recyclerView = findViewById(R.id.recyclerView);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        // Arama Özelliği (SearchView) Kurulumu
+        // ... (Arama ve Diğer Buton Dinleyicileri aynı kalacak) ...
+        setupUI();
+
+        // KİMLİK DOĞRULAMAYI BAŞLAT
+        checkAuthentication();
+    }
+
+    private void checkAuthentication() {
+        Executor executor = ContextCompat.getMainExecutor(this);
+        BiometricPrompt biometricPrompt = new BiometricPrompt(MainActivity.this, executor, new BiometricPrompt.AuthenticationCallback() {
+            @Override
+            public void onAuthenticationError(int errorCode, @NonNull CharSequence errString) {
+                super.onAuthenticationError(errorCode, errString);
+                Toast.makeText(getApplicationContext(), "Giriş Hatası: " + errString, Toast.LENGTH_SHORT).show();
+                finish(); // Hata durumunda uygulamayı kapat
+            }
+
+            @Override
+            public void onAuthenticationSucceeded(@NonNull BiometricPrompt.AuthenticationResult result) {
+                super.onAuthenticationSucceeded(result);
+                runOnUiThread(() -> {
+                    mainLayout.setVisibility(View.VISIBLE); // İçeriği göster
+                    ensureDefaultCategoriesAndLoad();
+                });
+            }
+
+            @Override
+            public void onAuthenticationFailed() {
+                super.onAuthenticationFailed();
+                // Kullanıcı yanlış parmak izi girdiğinde burası tetiklenir
+            }
+        });
+
+        BiometricPrompt.PromptInfo promptInfo = new BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Uygulamaya Giriş")
+                .setSubtitle("Biyometrik veri veya cihaz şifresi ile giriş yapın")
+                // Parmak izi, Yüz Tanıma veya Cihaz PIN/Şifresi
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG | BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                .build();
+
+        biometricPrompt.authenticate(promptInfo);
+    }
+
+    private void setupUI() {
         SearchView searchView = findViewById(R.id.searchView);
         if (searchView != null) {
             searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-                @Override
-                public boolean onQueryTextSubmit(String query) {
-                    performSearch(query);
-                    return true;
-                }
-
-                @Override
-                public boolean onQueryTextChange(String newText) {
-                    performSearch(newText);
-                    return true;
-                }
+                @Override public boolean onQueryTextSubmit(String query) { performSearch(query); return true; }
+                @Override public boolean onQueryTextChange(String newText) { performSearch(newText); return true; }
             });
         }
-
-        // Buton Dinleyicileri
         findViewById(R.id.fabAdd).setOnClickListener(v -> showAddAccountDialog());
         findViewById(R.id.fabFolders).setOnClickListener(v -> showCategoryPopupMenu(v));
-
-        ensureDefaultCategoriesAndLoad();
     }
 
-    // Arama işlemini gerçekleştiren metod
+    // ... performSearch, showCategoryPopupMenu, showAddAccountDialog metotları (Önceki halini koruyun) ...
+    // DÜZELTME: MainActivity içindeki tüm metotlarınızı (db.accountDao().getAll() vb.) buraya ekleyin.
+
     private void performSearch(String query) {
         new Thread(() -> {
             List<Account> result;
-            if (query.isEmpty()) {
-                result = db.accountDao().getAll();
-            } else {
-                // Veritabanındaki verileri çekip Java tarafında Türkçe kurallarıyla filtreliyoruz
+            if (query.isEmpty()) { result = db.accountDao().getAll(); }
+            else {
                 List<Account> allAccounts = db.accountDao().getAll();
                 result = new ArrayList<>();
                 Locale trLocale = new Locale("tr", "TR");
                 String lowerQuery = query.toLowerCase(trLocale);
-
                 for (Account acc : allAccounts) {
-                    // Hem başlığı hem de arama kelimesini Türkçe kurallarıyla küçültüp kıyaslıyoruz
-                    if (acc.title.toLowerCase(trLocale).contains(lowerQuery)) {
-                        result.add(acc);
-                    }
+                    if (acc.title.toLowerCase(trLocale).contains(lowerQuery)) { result.add(acc); }
                 }
             }
-            runOnUiThread(() -> {
-                if (adapter != null) {
-                    adapter.updateAccounts(result);
-                }
-            });
+            runOnUiThread(() -> { if (adapter != null) adapter.updateAccounts(result); });
         }).start();
     }
 
@@ -98,11 +132,7 @@ public class MainActivity extends AppCompatActivity {
                 popupMenu.getMenu().add(0, 0, 0, "+ Yeni Kategori Ekle");
                 popupMenu.getMenu().add(0, 1, 1, "- Kategori Sil");
                 popupMenu.getMenu().add(0, 2, 2, "Tümü");
-
-                for (Category c : categories) {
-                    popupMenu.getMenu().add(0, c.id + 100, 3, c.name);
-                }
-
+                for (Category c : categories) { popupMenu.getMenu().add(0, c.id + 100, 3, c.name); }
                 popupMenu.setOnMenuItemClickListener(item -> {
                     int id = item.getItemId();
                     if (id == 0) showAddCategoryDialog();
@@ -124,10 +154,7 @@ public class MainActivity extends AppCompatActivity {
             if (!name.isEmpty()) {
                 new Thread(() -> {
                     db.categoryDao().insert(new Category(name, false));
-                    runOnUiThread(() -> {
-                        dialog.dismiss();
-                        Toast.makeText(this, "Kategori eklendi", Toast.LENGTH_SHORT).show();
-                    });
+                    runOnUiThread(() -> { dialog.dismiss(); Toast.makeText(this, "Kategori eklendi", Toast.LENGTH_SHORT).show(); });
                 }).start();
             }
         });
@@ -141,18 +168,13 @@ public class MainActivity extends AppCompatActivity {
             for (Category c : categories) names.add(c.name);
             runOnUiThread(() -> {
                 if (names.isEmpty()) return;
-                new AlertDialog.Builder(this)
-                        .setTitle("Kategori Sil")
-                        .setItems(names.toArray(new String[0]), (dialog, which) -> {
-                            String selected = names.get(which);
-                            new Thread(() -> {
-                                db.categoryDao().deleteByName(selected);
-                                runOnUiThread(() -> {
-                                    Toast.makeText(this, "Kategori silindi", Toast.LENGTH_SHORT).show();
-                                    updateAccountList();
-                                });
-                            }).start();
-                        }).show();
+                new AlertDialog.Builder(this).setTitle("Kategori Sil").setItems(names.toArray(new String[0]), (dialog, which) -> {
+                    String selected = names.get(which);
+                    new Thread(() -> {
+                        db.categoryDao().deleteByName(selected);
+                        runOnUiThread(() -> { Toast.makeText(this, "Kategori silindi", Toast.LENGTH_SHORT).show(); updateAccountList(); });
+                    }).start();
+                }).show();
             });
         }).start();
     }
@@ -160,9 +182,7 @@ public class MainActivity extends AppCompatActivity {
     private void filterAccountsByCategory(String categoryName) {
         new Thread(() -> {
             List<Account> filtered = db.accountDao().getAccountsByCategory(categoryName);
-            runOnUiThread(() -> {
-                if (adapter != null) adapter.updateAccounts(filtered);
-            });
+            runOnUiThread(() -> { if (adapter != null) adapter.updateAccounts(filtered); });
         }).start();
     }
 
@@ -170,10 +190,8 @@ public class MainActivity extends AppCompatActivity {
         new Thread(() -> {
             List<Account> accounts = db.accountDao().getAll();
             runOnUiThread(() -> {
-                if (adapter == null) {
-                    adapter = new AccountAdapter(accounts);
-                    recyclerView.setAdapter(adapter);
-                } else adapter.updateAccounts(accounts);
+                if (adapter == null) { adapter = new AccountAdapter(accounts); recyclerView.setAdapter(adapter); }
+                else adapter.updateAccounts(accounts);
             });
         }).start();
     }
@@ -188,11 +206,7 @@ public class MainActivity extends AppCompatActivity {
         }).start();
     }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        updateAccountList();
-    }
+    @Override protected void onResume() { super.onResume(); }
 
     private void showAddAccountDialog() {
         View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_account, null);
@@ -201,7 +215,6 @@ public class MainActivity extends AppCompatActivity {
         EditText etPassword = view.findViewById(R.id.etPassword);
         Spinner spinnerCategory = view.findViewById(R.id.spinnerCategory);
         Button btnSave = view.findViewById(R.id.btnSave);
-
         new Thread(() -> {
             List<Category> categories = db.categoryDao().getAll();
             List<String> names = new ArrayList<>();
@@ -212,7 +225,6 @@ public class MainActivity extends AppCompatActivity {
                 spinnerCategory.setAdapter(catAdapter);
             });
         }).start();
-
         AlertDialog dialog = new AlertDialog.Builder(this).setView(view).create();
         btnSave.setOnClickListener(v -> {
             String title = etTitle.getText().toString().trim();
@@ -220,13 +232,10 @@ public class MainActivity extends AppCompatActivity {
             String pass = etPassword.getText().toString().trim();
             Object selected = spinnerCategory.getSelectedItem();
             String cat = (selected != null) ? selected.toString() : "Genel";
-
             if (!title.isEmpty() && !user.isEmpty() && !pass.isEmpty()) {
                 new Thread(() -> {
-                    // DÜZELTME: Kaydetmeden önce şifrele
                     CryptoHelper cryptoHelper = new CryptoHelper();
                     String encryptedPass = cryptoHelper.encrypt(pass);
-
                     db.accountDao().insert(new Account(title, user, encryptedPass, cat));
                     updateAccountList();
                     runOnUiThread(dialog::dismiss);
