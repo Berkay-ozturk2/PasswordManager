@@ -51,14 +51,16 @@ public class AccountAdapter extends RecyclerView.Adapter<AccountAdapter.AccountV
         });
 
         // Hızlı şifre kopyalama işlemi
+        // onBindViewHolder içindeki ilgili kısım:
         holder.btnQuickCopy.setOnClickListener(v -> {
             CryptoHelper crypto = new CryptoHelper();
-            String decryptedPassword = crypto.decrypt(account.password); // Çözülmüş şifre
+            // Veritabanındaki şifreli metni çözüp panoya öyle gönderiyoruz
+            String decryptedPassword = crypto.decrypt(account.password);
 
             ClipboardManager clipboard = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
             ClipData clip = ClipData.newPlainText("Password", decryptedPassword);
             clipboard.setPrimaryClip(clip);
-            Toast.makeText(v.getContext(), "Şifre çözüldü ve kopyalandı", Toast.LENGTH_SHORT).show();
+            Toast.makeText(v.getContext(), "Şifre kopyalandı", Toast.LENGTH_SHORT).show();
         });
     }
 
