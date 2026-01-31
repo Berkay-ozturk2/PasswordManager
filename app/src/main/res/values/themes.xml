@@ -1,18 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.PasswordManager" parent="Theme.Material3.DayNight">
-        <item name="colorPrimary">@color/primary</item>
-        <item name="colorOnPrimary">@color/on_primary</item>
-        <item name="colorSecondary">@color/secondary</item>
-        <item name="colorOnSecondary">@color/on_secondary</item>
-        <item name="android:windowBackground">@color/background</item>
-        <item name="colorSurface">@color/surface</item>
-        <item name="colorError">@color/error</item>
-    </style>
+        <item name="colorPrimary">#1A73E8</item>
+        <item name="colorPrimaryVariant">#1557B0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
 
-    <style name="Theme.PasswordManager" parent="Base.Theme.PasswordManager" />
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/primary</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="postSplashScreenTheme">@style/Theme.PasswordManager</item>
+        <item name="colorSecondary">#5F6368</item>
+        <item name="colorSecondaryVariant">#3C4043</item>
+        <item name="colorOnSecondary">#FFFFFF</item>
+
+        <item name="android:statusBarColor">#1557B0</item>
     </style>
 </resources>
