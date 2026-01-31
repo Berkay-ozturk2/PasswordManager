@@ -13,7 +13,6 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        // Üst bar başlığı ve geri butonu
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Ayarlar");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -21,7 +20,6 @@ public class SettingsActivity extends AppCompatActivity {
 
         db = AppDatabase.getInstance(this);
 
-        // XML'deki buton ID'si ile eşleşmeli
         if (findViewById(R.id.btnClearAll) != null) {
             findViewById(R.id.btnClearAll).setOnClickListener(v -> showClearDataDialog());
         }
@@ -29,14 +27,12 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void showClearDataDialog() {
         new AlertDialog.Builder(this)
-                .setTitle("Dikkat")
-                .setMessage("Tüm kayıtlı şifreleriniz silinecek. Emin misiniz?")
-                .setPositiveButton("Evet, Sil", (dialog, which) -> {
+                .setTitle("Tüm Verileri Sil")
+                .setMessage("Tüm kayıtlar silinecektir. Onaylıyor musunuz?")
+                .setPositiveButton("Evet", (dialog, which) -> {
                     new Thread(() -> {
-                        db.accountDao().deleteAll(); // Az önce eklediğimiz metot
-                        runOnUiThread(() -> {
-                            Toast.makeText(this, "Tüm veriler temizlendi", Toast.LENGTH_SHORT).show();
-                        });
+                        db.accountDao().deleteAll();
+                        runOnUiThread(() -> Toast.makeText(this, "Temizlendi", Toast.LENGTH_SHORT).show());
                     }).start();
                 })
                 .setNegativeButton("İptal", null)
