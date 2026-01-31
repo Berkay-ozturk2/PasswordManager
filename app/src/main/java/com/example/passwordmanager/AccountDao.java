@@ -27,7 +27,7 @@ public interface AccountDao {
     @Delete
     void delete(Account account);
 
-    @Query("DELETE FROM accounts") // Tablo adınız 'accounts' ise
+    @Query("DELETE FROM accounts")
     void deleteAll();
 
     // DetailActivity'de çağrılan ancak eksik olan metot eklendi:
