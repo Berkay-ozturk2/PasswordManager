@@ -49,6 +49,20 @@ public class MainActivity extends AppCompatActivity {
         setupUI();
         checkAuthentication(); // Kontrol burada başlıyor
     }
+    @Override
+    public boolean onCreateOptionsMenu(android.view.Menu menu) {
+        getMenuInflater().inflate(R.menu.main_menu, menu);
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(@NonNull android.view.MenuItem item) {
+        if (item.getItemId() == R.id.action_settings) {
+            android.content.Intent intent = new android.content.Intent(this, com.example.passwordmanager.SettingsActivity.class);
+            startActivity(intent);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
 
     private void checkAuthentication() {
         BiometricManager biometricManager = BiometricManager.from(this);

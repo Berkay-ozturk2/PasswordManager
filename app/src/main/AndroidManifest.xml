@@ -21,6 +21,11 @@
         </activity>
 
         <activity android:name=".DetailActivity" />
+        <activity
+            android:name=".SettingsActivity"
+            android:label="Ayarlar"
+            android:parentActivityName=".MainActivity">
+        </activity>
 
         <service
             android:name=".MyAutofillService"
