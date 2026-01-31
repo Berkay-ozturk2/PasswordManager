@@ -1,4 +1,4 @@
-package com.example.passwordmanager; // Paket ismi mutlaka bu olmalı
+package com.example.passwordmanager;
 
 import android.os.Bundle;
 import android.widget.Toast;
@@ -13,7 +13,7 @@ public class SettingsActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_settings);
 
-        // Geri butonu için ActionBar ayarı
+        // Üst bar başlığı ve geri butonu
         if (getSupportActionBar() != null) {
             getSupportActionBar().setTitle("Ayarlar");
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
@@ -21,7 +21,7 @@ public class SettingsActivity extends AppCompatActivity {
 
         db = AppDatabase.getInstance(this);
 
-        // activity_settings.xml içindeki buton ID'si btnClearAll olmalı
+        // XML'deki buton ID'si ile eşleşmeli
         if (findViewById(R.id.btnClearAll) != null) {
             findViewById(R.id.btnClearAll).setOnClickListener(v -> showClearDataDialog());
         }
@@ -29,12 +29,14 @@ public class SettingsActivity extends AppCompatActivity {
 
     private void showClearDataDialog() {
         new AlertDialog.Builder(this)
-                .setTitle("Verileri Sil")
-                .setMessage("Tüm şifreleriniz silinecek. Emin misiniz?")
-                .setPositiveButton("Evet", (dialog, which) -> {
+                .setTitle("Dikkat")
+                .setMessage("Tüm kayıtlı şifreleriniz silinecek. Emin misiniz?")
+                .setPositiveButton("Evet, Sil", (dialog, which) -> {
                     new Thread(() -> {
-                        db.accountDao().deleteAll(); // Dao'ya bu metodu ekleyeceğiz
-                        runOnUiThread(() -> Toast.makeText(this, "Tüm veriler silindi", Toast.LENGTH_SHORT).show());
+                        db.accountDao().deleteAll(); // Az önce eklediğimiz metot
+                        runOnUiThread(() -> {
+                            Toast.makeText(this, "Tüm veriler temizlendi", Toast.LENGTH_SHORT).show();
+                        });
                     }).start();
                 })
                 .setNegativeButton("İptal", null)
